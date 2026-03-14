@@ -1,0 +1,46 @@
+{
+    "name": "ralph-benchmark",
+    "description": "Fixed 3-story benchmark for Ralph config sweeps. Isolated sandbox \u2014 no production files touched. US-B01 (hard), US-B02 (medium), US-B03 (easy).",
+    "version": "2.0",
+    "userStories": [
+        {
+            "id": "US-B01",
+            "title": "token_scanner.py 422 handler",
+            "description": "In ralph_optimizer/sandbox/scripts/token_scanner.py, find get_price_ohlcv(). It calls requests.post(...) \u2014 if the API returns HTTP 422 (no OHLCV data for that token), it currently crashes. Add: try/except requests.HTTPError \u2014 if status_code == 422, print f'[SKIP OHLCV] No data for {token_address}' and return []. Re-raise any other HTTPError.",
+            "files": [
+                "ralph_optimizer/sandbox/scripts/token_scanner.py"
+            ],
+            "acceptance": [
+                "python3 -m py_compile ralph_optimizer/sandbox/scripts/token_scanner.py && echo PASS || echo FAIL",
+                "python3 -c \"import sys; sys.path.insert(0,'ralph_optimizer/sandbox/scripts'); import token_scanner; print('PASS')\" 2>&1 | grep -q PASS && echo PASS || echo FAIL"
+            ],
+            "status": "pending"
+        },
+        {
+            "id": "US-B02",
+            "title": "signal_runner.py Telegram BUY alerts",
+            "description": "In ralph_optimizer/sandbox/scripts/signal_runner.py, after a BUY signal fires (action_taken == 'BUY'), send a Telegram alert via the existing send_telegram_message() helper (import it from the module or implement inline using TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID env vars). Message format: f'\ud83d\udfe2 BUY {symbol} @ {entry_price:.4f} | score={score} | support={support:.4f} resistance={resistance:.4f}'",
+            "files": [
+                "ralph_optimizer/sandbox/scripts/signal_runner.py"
+            ],
+            "acceptance": [
+                "python3 -m py_compile ralph_optimizer/sandbox/scripts/signal_runner.py && echo PASS || echo FAIL",
+                "grep -q 'TELEGRAM\\|telegram\\|send_tg\\|send_telegram' ralph_optimizer/sandbox/scripts/signal_runner.py && echo PASS || echo FAIL"
+            ],
+            "status": "pending"
+        },
+        {
+            "id": "US-B03",
+            "title": "sandbox/scripts/record_trade.py manual trade logger",
+            "description": "Create ralph_optimizer/sandbox/scripts/record_trade.py. Reads a JSON trade dict from stdin (keys: ts, symbol, address, amount_usd, entry_price, support, resistance, tx). Appends it as a single JSONL line to ralph_optimizer/sandbox/data/trade_log.jsonl. Prints 'Logged: {symbol}' on success. Handles missing keys with a clear error message.",
+            "files": [
+                "ralph_optimizer/sandbox/scripts/record_trade.py"
+            ],
+            "acceptance": [
+                "python3 -m py_compile ralph_optimizer/sandbox/scripts/record_trade.py && echo PASS || echo FAIL",
+                "echo '{\"ts\":\"2026-03-13T12:00Z\",\"symbol\":\"DEGEN\",\"address\":\"0xabc\",\"amount_usd\":50,\"entry_price\":0.012,\"support\":0.010,\"resistance\":0.015,\"tx\":\"0xtest\"}' | python3 ralph_optimizer/sandbox/scripts/record_trade.py && grep -q DEGEN ralph_optimizer/sandbox/data/trade_log.jsonl && echo PASS || echo FAIL"
+            ],
+            "status": "pending"
+        }
+    ]
+}

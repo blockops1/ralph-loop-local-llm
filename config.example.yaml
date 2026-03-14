@@ -1,0 +1,27 @@
+# Ralph Loop Configuration
+
+model_url: "http://localhost:11434/v1"
+model_id: "qwen3.5:35b"
+
+# Loop limits
+max_iterations: 20          # Max stories to process in one ralph.sh run
+max_attempts_per_story: 3   # Max retries before a story is marked failed
+max_tool_calls_per_story: 160 # Max tool call rounds before giving up on a story
+
+# Model generation limits
+max_tokens: 16384           # Local model — no cost penalty, allow large completions
+
+# Context budget (tokens, estimated at 4 chars/token)
+max_context_tokens: 262000  # Local model — full 262K context window, proxy allows 250K
+max_progress_lines: 200     # Lines of progress.txt to include
+max_tool_output_chars: 32000  # ~8k tokens — large enough for most source files
+
+# Timeouts (seconds)
+request_timeout: 14400       # Local model — 2 hours; cold prefill on large context can take 20+ min
+quality_check_timeout: 120  # Max time for quality check command
+
+# Notifications
+notify_on_story_complete: true
+notify_on_story_fail: true
+notify_on_all_complete: true
+notify_on_blocked: true

@@ -1,0 +1,8 @@
+config.yaml
+logs/
+runs/
+__pycache__/
+*.pyc
+.ralph.lock
+*.log
+ralph_optimizer/sandbox/data/*.jsonl
