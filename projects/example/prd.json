@@ -1,0 +1,55 @@
+{
+  "_comment": "dependsOn: list story IDs this story requires. dependencyPolicy: 'skip' = skip if dep failed; 'block' = stop all.",
+  "project": "example",
+  "slug": "example",
+  "branchName": "ralph/example-feature",
+  "description": "Example PRD \u2014 replace with your feature description",
+  "contextFiles": [
+    "ralph/tools.py"
+  ],
+  "qualityChecks": [
+    "python3 -m py_compile {file}"
+  ],
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Add a hello_world function to tools.py",
+      "description": "As a developer, I want a hello_world() function in tools.py that returns a greeting string, so I can verify the ralph loop works end-to-end.",
+      "acceptanceCriteria": [
+        "Function hello_world() exists in tools.py",
+        "Function returns a non-empty string",
+        "python3 -m py_compile tools.py passes"
+      ],
+      "priority": 1,
+      "passes": false,
+      "attempts": 0,
+      "lastAttempt": null,
+      "error": null,
+      "notes": "",
+      "dependsOn": [],
+      "dependencyPolicy": "skip",
+      "_slug": "example"
+    },
+    {
+      "id": "US-002",
+      "title": "Add a farewell_world function that calls hello_world",
+      "description": "As a developer, I want a farewell_world() function in tools.py that calls hello_world() and returns a farewell string, so I can verify story dependency works end-to-end.",
+      "acceptanceCriteria": [
+        "Function farewell_world() exists in tools.py",
+        "Function calls hello_world() internally",
+        "python3 -m py_compile tools.py passes"
+      ],
+      "priority": 2,
+      "passes": false,
+      "attempts": 0,
+      "lastAttempt": null,
+      "error": null,
+      "notes": "",
+      "dependsOn": [
+        "US-001"
+      ],
+      "dependencyPolicy": "skip",
+      "_slug": "example"
+    }
+  ]
+}

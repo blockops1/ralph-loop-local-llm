@@ -22,6 +22,7 @@ import logging
 import os
 import sys
 import time
+import threading
 from pathlib import Path
 from datetime import datetime
 
@@ -85,7 +86,9 @@ def build_system_prompt(story: dict, progress: str, agents_md: str) -> str:
     # Build story block
     criteria = "\n".join(f"  - {c}" for c in story.get("acceptanceCriteria", []))
     context_files = "\n".join(f"  - {f}" for f in story.get("contextFiles", []))
-    quality_checks = "\n".join(f"  - {q}" for q in story.get("qualityChecks", []))
+    _qc_raw = story.get("qualityChecks", [])
+    _qc_list = [_qc_raw] if isinstance(_qc_raw, str) and _qc_raw.strip() else (_qc_raw if isinstance(_qc_raw, list) else [])
+    quality_checks = "\n".join(f"  - {q}" for q in _qc_list)
 
     story_block = f"""**Story ID:** {story['id']}
 **Title:** {story['title']}
@@ -186,7 +189,7 @@ def parse_sse_to_completion(sse_text: str) -> dict:
     if content_parts:
         message["content"] = "".join(content_parts)
     else:
-        message["content"] = None
+        message["content"] = ""
     if tool_calls_map:
         message["tool_calls"] = [tool_calls_map[i] for i in sorted(tool_calls_map)]
 
@@ -202,11 +205,18 @@ def parse_sse_to_completion(sse_text: str) -> dict:
 
 def extract_tool_calls_from_content(content: str) -> list:
     """
-    Extract tool calls from <tool_call>JSON</tool_call> XML in content text.
+    Extract tool calls from content text. Handles two formats:
+
+    Format 1 (preferred): <tool_call>{"name": "...", "arguments": {...}}</tool_call>
+    Format 2 (fallback):  <tool_calls><write_file><parameter=path>...</parameter>...
+                          (Qwen-style XML parameter format)
+
     Returns a list of OpenAI-format tool_call dicts, or [] if none found.
     """
     import re
     tool_calls = []
+
+    # Format 1: <tool_call>JSON</tool_call>
     for i, m in enumerate(re.finditer(r"<tool_call>(.*?)</tool_call>", content, re.DOTALL)):
         raw = m.group(1).strip()
         try:
@@ -223,25 +233,86 @@ def extract_tool_calls_from_content(content: str) -> list:
             })
         except (json.JSONDecodeError, AttributeError):
             continue
+
+    if tool_calls:
+        return tool_calls
+
+    # Format 2: <tool_calls><tool_name><parameter=key>value</parameter>...</tool_name></tool_calls>
+    # Qwen/Claude-style XML — model outputs this when it ignores the JSON format instruction
+    known_tools = {"read_file", "write_file", "list_dir", "run_command",
+                   "git_status", "git_commit", "task_complete"}
+    outer = re.search(r"<tool_calls>(.*?)</tool_calls>", content, re.DOTALL)
+    if outer:
+        block = outer.group(1)
+        for tool_name in known_tools:
+            tm = re.search(rf"<{tool_name}>(.*?)</{tool_name}>", block, re.DOTALL)
+            if not tm:
+                continue
+            inner = tm.group(1)
+            # Extract <parameter=key>value</parameter> pairs
+            arguments = {}
+            for pm in re.finditer(r"<parameter=(\w+)>(.*?)</parameter>", inner, re.DOTALL):
+                arguments[pm.group(1)] = pm.group(2).strip()
+            # Also try plain <key>value</key> pairs (alternate XML style)
+            if not arguments:
+                for pm in re.finditer(r"<(\w+)>(.*?)</\1>", inner, re.DOTALL):
+                    arguments[pm.group(1)] = pm.group(2).strip()
+            tool_calls.append({
+                "id": f"xml_{tool_name}",
+                "type": "function",
+                "function": {
+                    "name": tool_name,
+                    "arguments": json.dumps(arguments),
+                },
+            })
+
     return tool_calls
+
+
+
+def estimate_num_ctx(messages: list) -> int:
+    """Return num_ctx for Ollama. Start at 32768 and scale up if content is larger."""
+    total_chars = sum(len(str(m.get("content") or "")) for m in messages)
+    tokens = int(total_chars / 3.0) + 4096
+    ctx = 32768
+    while ctx < tokens and ctx < 131072:
+        ctx *= 2
+    return ctx
+
+
+def call_model_with_heartbeat(
+    messages: list,
+    cfg: dict,
+    log: logging.Logger,
+    label: str = "",
+    with_tools: bool = True,
+) -> dict:
+    """Passthrough — streaming now provides live visibility; no separate heartbeat needed."""
+    return call_model(messages, cfg, log=log, label=label, with_tools=with_tools)
 
 
 def call_model(
     messages: list,
     cfg: dict,
+    log: logging.Logger = None,
+    label: str = "",
     with_tools: bool = True,
 ) -> dict:
     """
-    Call the local model API. Returns a standard chat.completion dict.
-    Handles both JSON and SSE (streaming) responses from the proxy.
-    Raises on HTTP error or timeout.
+    Call the local model API with streaming enabled.
+    Logs a progress line every LOG_INTERVAL tokens so the log is never silent.
+    Returns a standard chat.completion dict assembled from SSE chunks.
     """
+    LOG_INTERVAL = 50  # log a line every N tokens received
+
     url = cfg["model_url"].rstrip("/") + "/chat/completions"
     payload = {
         "model": cfg["model_id"],
         "messages": messages,
         "max_tokens": cfg.get("max_tokens", 16384),
         "temperature": 0.2,
+        "stream": True,
+        "options": {"num_ctx": estimate_num_ctx(messages), "think": False},
     }
     if with_tools:
         payload["tools"] = TOOL_DEFINITIONS
@@ -250,15 +321,98 @@ def call_model(
     resp = requests.post(
         url,
         json=payload,
-        timeout=cfg.get("request_timeout", 3600),  # Increased default from 600s
+        timeout=cfg.get("request_timeout", 3600),
         headers={"Content-Type": "application/json"},
+        stream=True,
     )
-    resp.raise_for_status()
+    if not resp.ok:
+        body = resp.text[:500] if resp.text else "(empty)"
+        raise requests.HTTPError(
+            f"{resp.status_code} Client Error: {resp.reason} for url: {url} — body: {body}",
+            response=resp,
+        )
 
-    content_type = resp.headers.get("Content-Type", "")
-    if "text/event-stream" in content_type or resp.text.startswith("data:"):
-        return parse_sse_to_completion(resp.text)
-    return resp.json()
+    # Parse SSE stream chunk-by-chunk with live logging
+    content_parts = []
+    tool_calls_map: dict[int, dict] = {}
+    finish_reason = "stop"
+    response_id = ""
+    usage = None
+    token_count = 0
+    last_logged = 0
+    start_time = time.time()
+
+    for raw_line in resp.iter_lines():
+        if not raw_line:
+            continue
+        line = raw_line.decode("utf-8") if isinstance(raw_line, bytes) else raw_line
+        if not line.startswith("data:"):
+            continue
+        data = line[5:].strip()
+        if data == "[DONE]":
+            break
+        try:
+            chunk = json.loads(data)
+        except json.JSONDecodeError:
+            continue
+
+        if not response_id:
+            response_id = chunk.get("id", "")
+
+        # Usage-only chunk
+        if "usage" in chunk and not chunk.get("choices"):
+            usage = chunk["usage"]
+            continue
+
+        for choice in chunk.get("choices", []):
+            delta = choice.get("delta", {})
+            if choice.get("finish_reason"):
+                finish_reason = choice["finish_reason"]
+
+            if delta.get("content"):
+                tok = delta["content"]
+                content_parts.append(tok)
+                token_count += 1
+                if log and (token_count - last_logged) >= LOG_INTERVAL:
+                    elapsed = time.time() - start_time
+                    preview = "".join(content_parts)[-80:].replace("\n", " ")
+                    log.info(f"🔄 Streaming [{label}] {token_count} tokens | {elapsed:.0f}s | ...{preview}")
+                    last_logged = token_count
+
+            for tc in delta.get("tool_calls", []):
+                idx = tc.get("index", 0)
+                if idx not in tool_calls_map:
+                    tool_calls_map[idx] = {
+                        "id": tc.get("id", ""),
+                        "type": "function",
+                        "function": {"name": "", "arguments": ""},
+                    }
+                if tc.get("id"):
+                    tool_calls_map[idx]["id"] = tc["id"]
+                fn = tc.get("function", {})
+                if fn.get("name"):
+                    tool_calls_map[idx]["function"]["name"] += fn["name"]
+                if fn.get("arguments"):
+                    tool_calls_map[idx]["function"]["arguments"] += fn["arguments"]
+
+    elapsed_total = time.time() - start_time
+    if log:
+        tool_names = [v["function"]["name"] for v in tool_calls_map.values()] if tool_calls_map else []
+        log.info(f"✅ Stream complete [{label}] | {token_count} tokens | {elapsed_total:.1f}s | finish={finish_reason} | tools={tool_names or 'none'}")
+
+    message: dict = {"role": "assistant"}
+    message["content"] = "".join(content_parts) if content_parts else ""
+    if tool_calls_map:
+        message["tool_calls"] = [tool_calls_map[i] for i in sorted(tool_calls_map)]
+
+    result = {
+        "id": response_id,
+        "object": "chat.completion",
+        "choices": [{"index": 0, "message": message, "finish_reason": finish_reason}],
+    }
+    if usage:
+        result["usage"] = usage
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -297,6 +451,8 @@ def run_story_loop(story: dict, cfg: dict, log: logging.Logger, dry_run: bool = 
     max_tool_calls = cfg.get("max_tool_calls_per_story", 160)
     tool_call_count = 0
     completion_summary = None
+    consecutive_empty = 0  # consecutive empty-content no-tool-call responses
+    max_consecutive_empty = 3  # fail fast if model stops responding
 
     # Loop detection: track recent tool call signatures
     recent_calls = []  # list of (name, args_key) tuples
@@ -304,9 +460,11 @@ def run_story_loop(story: dict, cfg: dict, log: logging.Logger, dry_run: bool = 
     repetition_threshold = 3  # fail if same call pattern seen this many times
 
     log.info(f"Starting agentic loop for {story['id']}: {story['title']}")
+    story_start_time = time.time()
 
     while tool_call_count < max_tool_calls:
-        log.info(f"Model call #{tool_call_count + 1} (messages={len(messages)})")
+        elapsed = time.time() - story_start_time
+        log.info(f"Model call #{tool_call_count + 1} (messages={len(messages)}, elapsed={elapsed:.0f}s)")
 
         if dry_run:
             log.info("[DRY RUN] Would call model here. Stopping.")
@@ -314,9 +472,11 @@ def run_story_loop(story: dict, cfg: dict, log: logging.Logger, dry_run: bool = 
 
         # Retry up to 3 times on transient errors (429 concurrency, 503, timeout)
         response = None
+        call_start = time.time()
+        call_label = f"{story['id']} call #{tool_call_count + 1}"
         for _attempt in range(3):
             try:
-                response = call_model(messages, cfg, with_tools=True)
+                response = call_model_with_heartbeat(messages, cfg, log, label=call_label, with_tools=True)
                 break
             except requests.Timeout:
                 log.warning(f"Model API timeout (attempt {_attempt+1}/3) — retrying in 30s")
@@ -334,9 +494,14 @@ def run_story_loop(story: dict, cfg: dict, log: logging.Logger, dry_run: bool = 
             log.error("Model API failed after 3 retries")
             return False, "Model API failed after 3 retries (429/timeout)"
 
+        call_elapsed = time.time() - call_start
         choice = response.get("choices", [{}])[0]
         message = choice.get("message", {})
         finish_reason = choice.get("finish_reason", "stop")
+        usage = response.get("usage", {})
+        prompt_tokens = usage.get("prompt_tokens", "?")
+        completion_tokens = usage.get("completion_tokens", "?")
+        log.info(f"Model response in {call_elapsed:.1f}s | tokens: prompt={prompt_tokens} completion={completion_tokens} | finish={finish_reason}")
 
         # Append assistant message to history
         messages.append({"role": "assistant", **{k: v for k, v in message.items() if k != "role"}})
@@ -344,8 +509,9 @@ def run_story_loop(story: dict, cfg: dict, log: logging.Logger, dry_run: bool = 
         tool_calls = message.get("tool_calls") or []
         content = message.get("content") or ""
 
-        # Fallback: extract <tool_call> XML from content if no structured tool_calls
-        if not tool_calls and "<tool_call>" in content:
+        # Fallback: extract tool calls from content if no structured tool_calls
+        # Handles both <tool_call>JSON</tool_call> and Qwen XML parameter format
+        if not tool_calls and ("<tool_call>" in content or "<tool_calls>" in content):
             extracted = extract_tool_calls_from_content(content)
             if extracted:
                 import re as _re
@@ -355,7 +521,7 @@ def run_story_loop(story: dict, cfg: dict, log: logging.Logger, dry_run: bool = 
                 # Fix last assistant message in history to have clean content + tool_calls
                 messages[-1] = {
                     "role": "assistant",
-                    "content": clean_content or None,
+                    "content": clean_content or "",
                     "tool_calls": tool_calls,
                 }
 
@@ -374,11 +540,18 @@ def run_story_loop(story: dict, cfg: dict, log: logging.Logger, dry_run: bool = 
                 log.info("Completion signal in content")
                 break
             log.warning(f"No tool calls, finish_reason={finish_reason}. Content: {content[:200]}")
+            if not content:
+                consecutive_empty += 1
+                log.warning(f"Empty response #{consecutive_empty}/{max_consecutive_empty}")
+                if consecutive_empty >= max_consecutive_empty:
+                    return False, f"Model returned {consecutive_empty} consecutive empty responses — model stuck or refusing tools"
+            else:
+                consecutive_empty = 0
             if finish_reason in ("stop", "length"):
                 # Nudge the model
                 messages.append({
                     "role": "user",
-                    "content": "Continue. Use the available tools to implement the story, run quality checks, commit, and call task_complete when done."
+                    "content": "Call a tool now. Do not output text — make a tool call immediately."
                 })
                 tool_call_count += 1
                 continue
@@ -404,7 +577,9 @@ def run_story_loop(story: dict, cfg: dict, log: logging.Logger, dry_run: bool = 
             except json.JSONDecodeError:
                 args = {}
 
-            log.info(f"Tool call: {name}({list(args.keys())})")
+            # Log tool name + first 120 chars of args for visibility
+            args_preview = json.dumps(args)[:120].replace("\n", " ")
+            log.info(f"Tool call: {name} | args: {args_preview}")
 
             # Loop detection: track this call signature
             # Create a simple key from tool name + sorted arg keys + first 50 chars of arg values
@@ -466,6 +641,9 @@ def run_story_loop(story: dict, cfg: dict, log: logging.Logger, dry_run: bool = 
 def run_quality_checks(story: dict, log: logging.Logger) -> tuple[bool, str]:
     """Run quality checks from prd.json. Returns (passed, output)."""
     checks = story.get("qualityChecks", [])
+    # Normalize: qualityChecks may be a string (single command) or a list
+    if isinstance(checks, str):
+        checks = [checks] if checks.strip() else []
     if not checks:
         log.info("No quality checks defined")
         return True, "No quality checks"
@@ -494,19 +672,29 @@ def run_quality_checks(story: dict, log: logging.Logger) -> tuple[bool, str]:
 def notify(msg: str, log: logging.Logger) -> None:
     """Send a Telegram message directly to Mr. V via bot API."""
     import os, re
-    # Load token from .env
-    env_path = Path.home() / ".openclaw" / ".env"
-    token = None
-    if env_path.exists():
-        for line in env_path.read_text().splitlines():
-            m = re.match(r'TELEGRAM_BOT_TOKEN=(\S+)', line)
-            if m:
-                token = m.group(1)
-                break
+    # Prefer env var (set by ralph.sh sourcing .env), fall back to file parse
+    token = os.environ.get("TELEGRAM_BOT_TOKEN")
+    if not token:
+        env_path = Path.home() / ".env"
+        if env_path.exists():
+            for line in env_path.read_text().splitlines():
+                m = re.match(r'(?:export\s+)?TELEGRAM_BOT_TOKEN=["\']?([^"\'\\s]+)["\']?', line)
+                if m:
+                    token = m.group(1)
+                    break
     if not token:
         log.warning("TELEGRAM_BOT_TOKEN not found — cannot notify")
         return
-    chat_id = "374999219"
+    chat_id = os.environ.get("TELEGRAM_CHAT_ID", "")
+    if not chat_id:
+        # Try to parse from env file
+        if env_path and Path(env_path).exists():
+            for line in Path(env_path).read_text().splitlines():
+                import re as _re
+                m = _re.match(r'(?:export\s+)?TELEGRAM_CHAT_ID=["\']?([^"\'\\s]+)["\']?', line)
+                if m:
+                    chat_id = m.group(1)
+                    break
     try:
         resp = requests.post(
             f"https://api.telegram.org/bot{token}/sendMessage",

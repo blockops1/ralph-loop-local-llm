@@ -190,13 +190,55 @@ def tool_read_file(path: str) -> str:
         return f"ERROR reading file: {e}"
 
 
+_UNICODE_SUBS = {
+    '\u2014': '-',   # em-dash
+    '\u2013': '-',   # en-dash
+    '\u2018': "'",   # left single quote
+    '\u2019': "'",   # right single quote
+    '\u201c': '"',   # left double quote
+    '\u201d': '"',   # right double quote
+    '\u2192': '->',  # right arrow
+    '\u2022': '*',   # bullet
+    '\u00b7': '.',   # middle dot
+    '\u2026': '...', # ellipsis
+    '\u00a0': ' ',   # non-breaking space
+}
+
+def _sanitize_for_python(content: str, path: str) -> tuple[str, int]:
+    """Strip LLM-generated Unicode from .py files. Returns (sanitized, count_replaced)."""
+    if not path.endswith('.py'):
+        return content, 0
+    result = content
+    count = 0
+    for bad, good in _UNICODE_SUBS.items():
+        n = result.count(bad)
+        if n:
+            result = result.replace(bad, good)
+            count += n
+    # Catch any remaining non-ASCII chars not in our table
+    clean = []
+    for c in result:
+        if ord(c) > 127:
+            clean.append('_')
+            count += 1
+        else:
+            clean.append(c)
+    return ''.join(clean), count
+
+
 def tool_write_file(path: str, content: str) -> str:
     resolved = _resolve_path(path)
-    log.info(f"write_file: {resolved} ({len(content)} chars)")
+    sanitized, replaced = _sanitize_for_python(content, str(resolved))
+    if replaced:
+        log.warning(f"write_file: sanitized {replaced} non-ASCII chars from {resolved.name}")
+    log.info(f"write_file: {resolved} ({len(sanitized)} chars)")
     try:
         resolved.parent.mkdir(parents=True, exist_ok=True)
-        resolved.write_text(content, encoding="utf-8")
-        return f"OK: Written {len(content)} chars to {resolved}"
+        resolved.write_text(sanitized, encoding="utf-8")
+        msg = f"OK: Written {len(sanitized)} chars to {resolved}"
+        if replaced:
+            msg += f" (auto-sanitized {replaced} non-ASCII chars)"
+        return msg
     except Exception as e:
         return f"ERROR writing file: {e}"
 
@@ -219,8 +261,17 @@ def tool_list_dir(path: str) -> str:
         return f"ERROR listing directory: {e}"
 
 
+_BLOCKED_GIT_SUBCOMMANDS = {"checkout", "reset", "revert", "clean", "stash", "restore"}
+
 def tool_run_command(command: str, cwd: str = None, timeout: int = 60) -> str:
     work_dir = _resolve_path(cwd) if cwd else WORKSPACE
+    # Block destructive git subcommands — Ralph should never revert files it wrote
+    import re as _re
+    _git_sub = _re.search(r'\bgit\s+(\w+)', command)
+    if _git_sub and _git_sub.group(1) in _BLOCKED_GIT_SUBCOMMANDS:
+        blocked = _git_sub.group(1)
+        log.warning(f"run_command BLOCKED: 'git {blocked}' is not allowed. Use git_commit to save work.")
+        return f"ERROR: 'git {blocked}' is blocked. Ralph may only use git_status and git_commit. Do not revert files — if py_compile fails, fix the syntax error and rewrite the file."
     log.info(f"run_command: {command!r} (cwd={work_dir})")
     try:
         result = subprocess.run(
@@ -250,6 +301,11 @@ def tool_git_status() -> str:
 
 
 def tool_git_commit(message: str) -> str:
+    # Sanitize commit message — same Unicode problem as write_file
+    clean_msg, replaced = _sanitize_for_python(message, 'msg.py')  # reuse sanitizer
+    if replaced:
+        log.warning(f"git_commit: sanitized {replaced} non-ASCII chars from commit message")
+    message = clean_msg
     log.info(f"git_commit: {message!r}")
     # Check if there are any changes to commit
     status_result = tool_run_command('git status --porcelain', cwd=str(WORKSPACE))

@@ -57,8 +57,29 @@ mkdir -p "$LOG_DIR"
 # Per-run timestamped log — avoids multiple cron runs colliding in the same file
 LOG_FILE="$LOG_DIR/${SLUG}-$(date +%Y-%m-%dT%H%M%S).log"
 
+# CPU governor: flip to performance for duration of run, restore on exit
+_set_governor() {
+    local gov="$1"
+    for f in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do
+        echo "$gov" | sudo tee "$f" > /dev/null 2>&1 || true
+    done
+    echo "CPU governor → $gov"
+}
+PREV_GOVERNOR="$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor 2>/dev/null || echo ondemand)"
+trap '_set_governor "$PREV_GOVERNOR"' EXIT
+_set_governor performance
+
 echo "=== Ralph Loop: $SLUG ===" >> "$LOG_FILE"
 cd "$WORKSPACE_DIR"
+
+# Load credentials so ralph.py has TELEGRAM_BOT_TOKEN etc in environment
+if [ -f "$HOME/.env" ]; then
+    source "$HOME/.env"
+elif [ -f "$HOME/.openclaw/.env" ]; then
+    set -a
+    source "$HOME/.openclaw/.env"
+    set +a
+fi
 
 # Run detached — nohup ensures ralph survives even if the caller/session is killed
 nohup $PYTHON "$RALPH_PY" "$SLUG" $EXTRA_ARGS >> "$LOG_FILE" 2>&1 &
