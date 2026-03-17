@@ -1,5 +1,73 @@
 # Changelog
 
+## v0.3.0 — 2026-03-17
+
+### Switched from Ollama to llama.cpp (llama-server)
+
+Ollama was causing memory pressure crashes under load (pre-allocates full KV cache per request regardless of actual message size). Switched to `llama-server` from `llama.cpp`:
+
+| Backend | Model | Stability |
+|---------|-------|-----------|
+| Ollama | qwen3.5:35b MoE | Crashes under memory pressure (30GB+ alloc) |
+| llama-server | Qwen3.5-35B-A3B-Q4_K_M.gguf | Stable — fixed ctx-size, no dynamic alloc |
+
+**Setup:** `brew install llama.cpp` then run llama-server with `--ctx-size 65536 --flash-attn on --jinja`.
+
+**Note:** llama.cpp uses different no-think syntax than Ollama:
+- Ollama: `"options": {"think": False}`
+- llama.cpp: `"chat_template_kwargs": {"enable_thinking": False}`
+
+### New: write_file truncation guard
+
+`tools.py` now rejects `write_file` calls that contain truncation artifacts. If the model internally truncates a large file and writes back `... [truncated - N total lines]` as literal content, `write_file` returns an error and the model must re-read and write the complete content.
+
+Patterns detected: `"... [truncated"`, `"[truncated -"`, `"# ... truncated"`, `"# [truncated"`.
+
+### New: sequential ralph.sh (blocks on PID)
+
+`ralph.sh` now waits for Ralph to finish before returning (`wait $RALPH_PID`). This makes sequential chaining safe — just run `ralph.sh slug-1`, `ralph.sh slug-2`, etc. and they execute in order. Previously, ralph.sh returned immediately, causing parallel llama-server deadlocks when scripts chained multiple PRDs.
+
+### New: BLOCKED story status with rich Telegram alert
+
+When a story exhausts `max_attempts_per_story`, Ralph now:
+1. Sets `status: "blocked"` in prd.json (terminal state — Ralph skips it on future runs)
+2. Sends a rich Telegram notification with story ID, project slug, and last error
+3. Continues to the next unblocked story
+
+Previously: silent failure at max attempts. Now: explicit BLOCKED state + alert.
+
+### New: pre-write self-review checklist in PROMPT.md
+
+Before calling `write_file`, Ralph now outputs a structured checklist:
+- Every function/method being added or changed
+- Every database table name and column name referenced in SQL
+- Every external API endpoint or attribute being called
+- How each acceptance criterion will be satisfied
+
+This catches schema hallucinations (wrong table/column names) at near-zero cost — same inference call, more structured output.
+
+### New: contextFiles pre-loaded into system prompt
+
+Files listed in `contextFiles` are now pre-loaded directly into the system prompt at story start. The model sees the file contents before making any tool calls — eliminating re-read loops on large files that were getting pushed out of working context.
+
+Context budget note: pre-loaded files count against `max_context_tokens`. Align this with llama-server `--ctx-size` (leave ~10% headroom for generation).
+
+### Configuration changes
+
+| Setting | Old | New | Reason |
+|---------|-----|-----|--------|
+| `max_context_tokens` | 262000 | 60000 | Align with llama-server 65536 ctx |
+| `max_tool_output_chars` | 32000 | 80000 | Large files come back whole |
+| `max_attempts_per_story` | 3 | 5 | More runway before BLOCKED |
+| `request_timeout` | 7200 | 14400 | 4h for large-context cold prefill |
+
+### Bug fixes
+
+- **Loop detector threshold raised** — `max_recent_calls` 10→20, `repetition_threshold` 3→6. Previously fired too aggressively on large-file stories that required multiple reads before writing.
+- **VERSION file** — synced to match CHANGELOG (was stuck at 0.1.0).
+
+---
+
 ## v0.2.0 — 2026-03-15
 
 ### Switched from MLX to Ollama
@@ -11,36 +79,23 @@ Ralph originally ran on the MLX inference stack. After benchmark testing (3-stor
 | MLX (waybarrios vllm-mlx) | qwen3.5:27b instruct | ~11 min |
 | Ollama | qwen3.5:35b MoE | ~3 min |
 
-**3.4× speedup** with no quality loss. Ollama also handles model switching without server restarts.
+**3.4× speedup** with no quality loss.
 
 ### Bug fixes
 
-- **`qualityChecks` string vs list normalization** — `prd.json` `qualityChecks` can now be a string (single command) or a list. Previously, a string value was iterated character-by-character, causing the quality check command to be truncated to a single character (`p`), which always failed. Now normalized to a list before running.
-
-- **write_file non-ASCII sanitization** — Qwen3.5 occasionally generates Unicode em-dashes (—), curly quotes, and arrows in Python code, causing `SyntaxError` on write. `write_file` now automatically strips all non-ASCII characters from `.py` files before writing to disk.
-
-- **git_commit non-ASCII sanitization** — Same fix applied to commit messages. The model occasionally generated em-dashes in commit message text.
-
-- **`think=False` in Ollama options** — Qwen3.5 is a thinking model. Without `think=False`, it fills the context with `<think>` reasoning blocks, then stops after opening `<tool_calls>` before emitting the JSON body (`finish=stop` with 2 tokens). Now disabled by default.
-
-- **`<think>` block stripping** — Even with `think=False`, Qwen3.5 sometimes emits `<think>` blocks. These are now stripped from model responses before parsing.
-
-- **Bare `<tool_calls>` truncation recovery** — If the model emits `finish=stop` immediately after `<tool_calls>` (without the JSON body), Ralph now detects this, discards the partial response without adding it to history, and retries the call clean. Up to 1 retry with a skip-plan nudge.
-
-- **Destructive git subcommands blocked** — `run_command` now rejects `git checkout`, `git reset`, `git revert`, `git clean`, `git stash`, and `git restore`. These were being triggered by the model when a quality check failed and it tried to revert its own changes, causing an unrecoverable loop. The model now gets an error message and must repair the file instead.
-
-- **Dynamic `num_ctx`** — Ollama pre-allocates the full KV cache based on `num_ctx`. With a 262K context window, this was allocating ~12GB of RAM for every request regardless of actual message size. Ralph now calculates the actual message size and injects a matching `num_ctx` per request (floor 8192, ceiling 131072), reducing memory pressure significantly.
+- **`qualityChecks` string vs list normalization** — now normalized to a list before running.
+- **write_file non-ASCII sanitization** — strips em-dashes, curly quotes from `.py` files.
+- **git_commit non-ASCII sanitization** — same fix for commit messages.
+- **`think=False` in Ollama options** — disabled by default (Qwen3.5 thinking model).
+- **`<think>` block stripping** — even with `think=False`, sometimes emitted; now stripped.
+- **Bare `<tool_calls>` truncation recovery** — detects and retries on `finish=stop` after opening tag.
+- **Destructive git subcommands blocked** — `git checkout`, `git reset`, etc. rejected in `run_command`.
+- **Dynamic `num_ctx`** — injected per-request based on actual message size.
 
 ### PRD schema additions
 
-- `contextFiles` — list of files to pre-load before the story runs. Strongly recommended for any story that modifies an existing file.
-- `qualityChecks` — now accepts both string and list formats.
-- `dependsOn` / `dependencyPolicy` — story dependency tracking. If a dependency failed, the dependent story is skipped or blocks all remaining stories.
-
-### Documentation
-
-- README rewritten: Ollama setup, confirmed model matrix, Qwen3.5 quirk reference, updated PRD schema, intervention guide
-- Example PRD updated
+- `contextFiles` — list of files to pre-load before the story runs.
+- `dependsOn` / `dependencyPolicy` — story dependency tracking.
 
 ---
 

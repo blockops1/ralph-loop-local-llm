@@ -18,9 +18,11 @@ Ralph is a lightweight autonomous coding loop that reads a Product Requirements 
 ## Requirements
 
 - Python 3.10+
-- [Ollama](https://ollama.com) running locally
-- A supported model pulled in Ollama (see **Model** section below)
+- [llama.cpp](https://github.com/ggerganov/llama.cpp) (`brew install llama.cpp` on macOS)
+- A Qwen3.5 GGUF model (see **Model** section below)
 - `pip install pyyaml requests`
+
+> **Note:** Ralph v0.2 used Ollama. v0.3 switched to `llama-server` from llama.cpp for better memory stability on Apple Silicon. Ollama pre-allocates the full KV cache per request (~12GB+ for large contexts), causing crashes under load. llama.cpp uses a fixed `--ctx-size` with no dynamic allocation.
 
 ---
 
@@ -56,7 +58,7 @@ The Ollama qwen3.5:35b MoE model activates only ~10B parameters per token, givin
 
 Ralph handles these internally — you don't need to configure anything:
 
-- **Thinking model behavior:** Qwen3.5 is a thinking model. Ralph sets `think=False` in Ollama options to prevent the model from generating long internal reasoning chains that eat context before the tool call body. Without this, the model fills the context window with `<think>` blocks and stops.
+- **Thinking model behavior:** Qwen3.5 is a thinking model. Ralph disables thinking via `chat_template_kwargs: {"enable_thinking": False}` (llama.cpp syntax). Without this, the model fills the context with `<think>` blocks then emits `<tool_calls>` and stops (`finish=stop` with 2 tokens). Note: Ollama used `"options": {"think": False}` -- different syntax.
 - **Em-dash generation:** The model occasionally generates Unicode em-dashes (—) and curly quotes in Python code it writes, causing `SyntaxError`. Ralph's `write_file` tool automatically strips all non-ASCII characters from `.py` files before writing to disk.
 - **`<tool_calls>` truncation:** On large context windows or with certain models, Ollama may emit `finish=stop` immediately after opening `<tool_calls>`, before the JSON body. Ralph detects this and retries the call with a clean history.
 - **`qualityChecks` format:** The `qualityChecks` field in `prd.json` can be either a string (single command) or a list. Ralph handles both.
@@ -102,8 +104,8 @@ echo "TELEGRAM_CHAT_ID=your_chat_id" >> ~/.env
 
 ```yaml
 # config.yaml
-model_url: "http://localhost:11434/v1"   # Ollama OpenAI-compat endpoint
-model_id: "qwen3.5:35b"                 # Must match ollama list output exactly
+model_url: "http://localhost:11434/v1"   # llama-server OpenAI-compat endpoint
+model_id: "Qwen3.5-35B-A3B-Q4_K_M.gguf" # Must match model filename (without path)
 
 # Loop limits
 max_iterations: 20          # Max stories per run

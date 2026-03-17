@@ -1,5 +1,5 @@
 """
-prd_manager.py — Ralph Loop PRD and progress file management.
+prd_manager.py - Ralph Loop PRD and progress file management.
 
 Handles reading/writing prd.json, tracking story status,
 managing progress.txt, and archiving completed runs.
@@ -127,6 +127,26 @@ def mark_story_failed(prd: dict, story_id: str, error: str = "") -> dict:
     return prd
 
 
+def mark_story_blocked(prd: dict, story_id: str, error: str = "") -> dict:
+    """Mark a story as permanently blocked (hit max attempts). Returns updated prd."""
+    for story in prd.get("userStories", []):
+        if story["id"] == story_id:
+            story["status"] = "blocked"
+            story["blockedAt"] = datetime.now(timezone.utc).isoformat()
+            story["blockReason"] = error[:500] if error else "max attempts reached"
+            log.warning(f"Story {story_id} marked BLOCKED: {error[:80]}")
+            break
+    return prd
+
+
+def get_blocked_stories(prd: dict, max_attempts: int = 3) -> list:
+    """Return list of stories that have hit max_attempts without passing."""
+    return [
+        s for s in prd.get("userStories", [])
+        if not s.get("passes", False) and s.get("attempts", 0) >= max_attempts
+    ]
+
+
 def story_summary(prd: dict) -> str:
     """Return a one-line status string: 'X/Y stories complete'."""
     stories = prd.get("userStories", [])
@@ -165,7 +185,7 @@ def init_progress(slug: str) -> None:
     path = progress_path(slug)
     path.parent.mkdir(parents=True, exist_ok=True)
     if not path.exists():
-        path.write_text(f"# Ralph Progress Log — {slug}\nStarted: {datetime.now().isoformat()}\n---\n")
+        path.write_text(f"# Ralph Progress Log - {slug}\nStarted: {datetime.now().isoformat()}\n---\n")
 
 
 # ---------------------------------------------------------------------------
@@ -198,7 +218,7 @@ def archive_if_branch_changed(slug: str, prd: dict) -> bool:
 
         # Reset progress for new run
         progress_path(slug).write_text(
-            f"# Ralph Progress Log — {slug}\nStarted: {datetime.now().isoformat()}\n"
+            f"# Ralph Progress Log - {slug}\nStarted: {datetime.now().isoformat()}\n"
             f"Branch: {current_branch}\n---\n"
         )
         log.info(f"Archived previous run to {arch}")

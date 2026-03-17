@@ -1,5 +1,5 @@
 """
-tools.py — Ralph Loop tool definitions and executors.
+tools.py - Ralph Loop tool definitions and executors.
 
 Provides:
   - TOOL_DEFINITIONS: OpenAI-format tool specs to pass in each API request
@@ -117,7 +117,7 @@ TOOL_DEFINITIONS = [
         "type": "function",
         "function": {
             "name": "git_status",
-            "description": "Check git status — shows modified, staged, and untracked files.",
+            "description": "Check git status - shows modified, staged, and untracked files.",
             "parameters": {
                 "type": "object",
                 "properties": {}
@@ -184,7 +184,7 @@ def tool_read_file(path: str) -> str:
         content = resolved.read_text(encoding="utf-8")
         lines = content.splitlines()
         if len(lines) > 500:
-            return "\n".join(lines[:500]) + f"\n... [truncated — {len(lines)} total lines]"
+            return "\n".join(lines[:500]) + f"\n... [truncated - {len(lines)} total lines]"
         return content
     except Exception as e:
         return f"ERROR reading file: {e}"
@@ -227,6 +227,23 @@ def _sanitize_for_python(content: str, path: str) -> tuple[str, int]:
 
 
 def tool_write_file(path: str, content: str) -> str:
+    # Guard: reject content that contains truncation artifacts from tool_read_file
+    _TRUNCATION_MARKERS = [
+        "... [truncated",
+        "[truncated -",
+        "[truncated -",
+        "# ... truncated",
+        "# [truncated",
+    ]
+    for _marker in _TRUNCATION_MARKERS:
+        if _marker in content:
+            log.error(f"write_file BLOCKED: truncation artifact detected in content for {path}")
+            return (
+                f"ERROR: Content contains a truncation artifact ({_marker!r}). "
+                f"Do NOT write truncated content. "
+                f"The file has more lines than shown. "
+                f"Re-read the file, then write the COMPLETE content including all lines after the truncation point."
+            )
     resolved = _resolve_path(path)
     sanitized, replaced = _sanitize_for_python(content, str(resolved))
     if replaced:
@@ -265,13 +282,13 @@ _BLOCKED_GIT_SUBCOMMANDS = {"checkout", "reset", "revert", "clean", "stash", "re
 
 def tool_run_command(command: str, cwd: str = None, timeout: int = 60) -> str:
     work_dir = _resolve_path(cwd) if cwd else WORKSPACE
-    # Block destructive git subcommands — Ralph should never revert files it wrote
+    # Block destructive git subcommands - Ralph should never revert files it wrote
     import re as _re
     _git_sub = _re.search(r'\bgit\s+(\w+)', command)
     if _git_sub and _git_sub.group(1) in _BLOCKED_GIT_SUBCOMMANDS:
         blocked = _git_sub.group(1)
         log.warning(f"run_command BLOCKED: 'git {blocked}' is not allowed. Use git_commit to save work.")
-        return f"ERROR: 'git {blocked}' is blocked. Ralph may only use git_status and git_commit. Do not revert files — if py_compile fails, fix the syntax error and rewrite the file."
+        return f"ERROR: 'git {blocked}' is blocked. Ralph may only use git_status and git_commit. Do not revert files - if py_compile fails, fix the syntax error and rewrite the file."
     log.info(f"run_command: {command!r} (cwd={work_dir})")
     try:
         result = subprocess.run(
@@ -301,7 +318,7 @@ def tool_git_status() -> str:
 
 
 def tool_git_commit(message: str) -> str:
-    # Sanitize commit message — same Unicode problem as write_file
+    # Sanitize commit message - same Unicode problem as write_file
     clean_msg, replaced = _sanitize_for_python(message, 'msg.py')  # reuse sanitizer
     if replaced:
         log.warning(f"git_commit: sanitized {replaced} non-ASCII chars from commit message")
@@ -310,7 +327,7 @@ def tool_git_commit(message: str) -> str:
     # Check if there are any changes to commit
     status_result = tool_run_command('git status --porcelain', cwd=str(WORKSPACE))
     if not status_result.strip():
-        # Nothing to commit — already committed or no changes
+        # Nothing to commit - already committed or no changes
         return "OK: Nothing to commit (working tree clean)"
     for _git_attempt in range(3):
         result = tool_run_command(f'git add -A && git commit -m {json.dumps(message)}', cwd=str(WORKSPACE))
@@ -322,7 +339,7 @@ def tool_git_commit(message: str) -> str:
 
 
 def tool_task_complete(summary: str) -> str:
-    """Signals completion — handled by ralph.py, not actually executed here."""
+    """Signals completion - handled by ralph.py, not actually executed here."""
     log.info(f"task_complete: {summary[:100]}")
     return f"TASK_COMPLETE: {summary}"
 

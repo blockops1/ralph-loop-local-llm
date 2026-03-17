@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-ralph.py — Ralph Loop main orchestrator.
+ralph.py - Ralph Loop main orchestrator.
 
 Autonomous coding loop for the local LLM. Reads prd.json, picks the next
 incomplete story, runs an agentic loop (multi-turn tool execution) with the
@@ -32,10 +32,11 @@ import requests
 # Sibling imports
 RALPH_DIR = Path(__file__).parent
 sys.path.insert(0, str(RALPH_DIR))
-from tools import TOOL_DEFINITIONS, execute_tool
+from tools import TOOL_DEFINITIONS, execute_tool, WORKSPACE
 from prd_manager import (
     load_prd, save_prd, get_next_story, all_done, any_blocked,
-    mark_story_done, mark_story_failed, story_summary,
+    mark_story_done, mark_story_failed, mark_story_blocked, get_blocked_stories,
+    append_progress, story_summary,
     append_progress, get_progress_context, init_progress,
     archive_if_branch_changed, acquire_lock, release_lock,
     agents_md_path, project_dir, list_active_projects,
@@ -85,10 +86,25 @@ def build_system_prompt(story: dict, progress: str, agents_md: str) -> str:
 
     # Build story block
     criteria = "\n".join(f"  - {c}" for c in story.get("acceptanceCriteria", []))
-    context_files = "\n".join(f"  - {f}" for f in story.get("contextFiles", []))
     _qc_raw = story.get("qualityChecks", [])
     _qc_list = [_qc_raw] if isinstance(_qc_raw, str) and _qc_raw.strip() else (_qc_raw if isinstance(_qc_raw, list) else [])
     quality_checks = "\n".join(f"  - {q}" for q in _qc_list)
+
+    # Pre-load contextFiles contents into the prompt so the model never needs to read them
+    context_file_list = story.get("contextFiles", [])
+    context_files_section = ""
+    if context_file_list:
+        parts = []
+        for cf in context_file_list:
+            cf_path = WORKSPACE / cf
+            if cf_path.exists():
+                content = cf_path.read_text(encoding="utf-8", errors="replace")
+                parts.append(f"### {cf}\n```\n{content}\n```")
+            else:
+                parts.append(f"### {cf}\n(file does not exist yet - create it)")
+        context_files_section = "\n\n".join(parts)
+    else:
+        context_files_section = "(none specified - use list_dir to explore)"
 
     story_block = f"""**Story ID:** {story['id']}
 **Title:** {story['title']}
@@ -97,17 +113,23 @@ def build_system_prompt(story: dict, progress: str, agents_md: str) -> str:
 **Acceptance Criteria:**
 {criteria}
 
-**Context Files (read these first):**
-{context_files if context_files else '  (none specified — use list_dir to explore)'}
+**Context Files (already loaded below - do NOT call read_file on these):**
+{chr(10).join(f"  - {f}" for f in context_file_list) if context_file_list else "  (none)"}
 
 **Quality Checks (run before committing):**
 {quality_checks if quality_checks else '  (none specified)'}
 
-**Previous error (if retry):** {story.get('error', '') or 'none'}"""
+**Previous error (if retry):** {story.get('error', '') or 'none'}
+
+## Pre-loaded File Contents
+
+These files are already in your context. Do NOT read them again with read_file.
+
+{context_files_section}"""
 
     template = template.replace("{{STORY_BLOCK}}", story_block)
-    template = template.replace("{{PROGRESS_BLOCK}}", progress or "(no prior progress)")
-    template = template.replace("{{AGENTS_BLOCK}}", agents_md or "(no AGENTS.md found)")
+    template = template.replace("# Ralph Progress Log - ralph-blocked-status\nStarted: 2026-03-17T18:43:53.562828\n---", progress or "(no prior progress)")
+    template = template.replace("(no AGENTS.md found)", agents_md or "(no AGENTS.md found)")
 
     return template
 
@@ -238,7 +260,7 @@ def extract_tool_calls_from_content(content: str) -> list:
         return tool_calls
 
     # Format 2: <tool_calls><tool_name><parameter=key>value</parameter>...</tool_name></tool_calls>
-    # Qwen/Claude-style XML — model outputs this when it ignores the JSON format instruction
+    # Qwen/Claude-style XML - model outputs this when it ignores the JSON format instruction
     known_tools = {"read_file", "write_file", "list_dir", "run_command",
                    "git_status", "git_commit", "task_complete"}
     outer = re.search(r"<tool_calls>(.*?)</tool_calls>", content, re.DOTALL)
@@ -287,7 +309,7 @@ def call_model_with_heartbeat(
     label: str = "",
     with_tools: bool = True,
 ) -> dict:
-    """Passthrough — streaming now provides live visibility; no separate heartbeat needed."""
+    """Passthrough - streaming now provides live visibility; no separate heartbeat needed."""
     return call_model(messages, cfg, log=log, label=label, with_tools=with_tools)
 
 
@@ -312,7 +334,7 @@ def call_model(
         "max_tokens": cfg.get("max_tokens", 16384),
         "temperature": 0.2,
         "stream": True,
-        "options": {"num_ctx": estimate_num_ctx(messages), "think": False},
+        "chat_template_kwargs": {"enable_thinking": False},
     }
     if with_tools:
         payload["tools"] = TOOL_DEFINITIONS
@@ -328,7 +350,7 @@ def call_model(
     if not resp.ok:
         body = resp.text[:500] if resp.text else "(empty)"
         raise requests.HTTPError(
-            f"{resp.status_code} Client Error: {resp.reason} for url: {url} — body: {body}",
+            f"{resp.status_code} Client Error: {resp.reason} for url: {url} - body: {body}",
             response=resp,
         )
 
@@ -376,7 +398,7 @@ def call_model(
                 if log and (token_count - last_logged) >= LOG_INTERVAL:
                     elapsed = time.time() - start_time
                     preview = "".join(content_parts)[-80:].replace("\n", " ")
-                    log.info(f"🔄 Streaming [{label}] {token_count} tokens | {elapsed:.0f}s | ...{preview}")
+                    log.info(f"_ Streaming [{label}] {token_count} tokens | {elapsed:.0f}s | ...{preview}")
                     last_logged = token_count
 
             for tc in delta.get("tool_calls", []):
@@ -398,7 +420,7 @@ def call_model(
     elapsed_total = time.time() - start_time
     if log:
         tool_names = [v["function"]["name"] for v in tool_calls_map.values()] if tool_calls_map else []
-        log.info(f"✅ Stream complete [{label}] | {token_count} tokens | {elapsed_total:.1f}s | finish={finish_reason} | tools={tool_names or 'none'}")
+        log.info(f"_ Stream complete [{label}] | {token_count} tokens | {elapsed_total:.1f}s | finish={finish_reason} | tools={tool_names or 'none'}")
 
     message: dict = {"role": "assistant"}
     message["content"] = "".join(content_parts) if content_parts else ""
@@ -456,8 +478,8 @@ def run_story_loop(story: dict, cfg: dict, log: logging.Logger, dry_run: bool = 
 
     # Loop detection: track recent tool call signatures
     recent_calls = []  # list of (name, args_key) tuples
-    max_recent_calls = 10  # window for repetition detection
-    repetition_threshold = 3  # fail if same call pattern seen this many times
+    max_recent_calls = 20  # window for repetition detection
+    repetition_threshold = 6  # fail if same call pattern seen this many times
 
     log.info(f"Starting agentic loop for {story['id']}: {story['title']}")
     story_start_time = time.time()
@@ -479,13 +501,13 @@ def run_story_loop(story: dict, cfg: dict, log: logging.Logger, dry_run: bool = 
                 response = call_model_with_heartbeat(messages, cfg, log, label=call_label, with_tools=True)
                 break
             except requests.Timeout:
-                log.warning(f"Model API timeout (attempt {_attempt+1}/3) — retrying in 30s")
+                log.warning(f"Model API timeout (attempt {_attempt+1}/3) - retrying in 30s")
                 time.sleep(30)
             except Exception as e:
                 err_str = str(e)
                 if "429" in err_str or "503" in err_str or "502" in err_str:
                     wait = 30 * (_attempt + 1)
-                    log.warning(f"Model API {err_str[:60]} (attempt {_attempt+1}/3) — retrying in {wait}s")
+                    log.warning(f"Model API {err_str[:60]} (attempt {_attempt+1}/3) - retrying in {wait}s")
                     time.sleep(wait)
                 else:
                     log.error(f"Model API error: {e}")
@@ -534,7 +556,7 @@ def run_story_loop(story: dict, cfg: dict, log: logging.Logger, dry_run: bool = 
             return False, f"Model server error: {content[:200]}"
 
         if not tool_calls:
-            # No tool call — model may be done or stuck
+            # No tool call - model may be done or stuck
             if "TASK_COMPLETE" in content or "<promise>COMPLETE</promise>" in content:
                 completion_summary = content
                 log.info("Completion signal in content")
@@ -544,14 +566,14 @@ def run_story_loop(story: dict, cfg: dict, log: logging.Logger, dry_run: bool = 
                 consecutive_empty += 1
                 log.warning(f"Empty response #{consecutive_empty}/{max_consecutive_empty}")
                 if consecutive_empty >= max_consecutive_empty:
-                    return False, f"Model returned {consecutive_empty} consecutive empty responses — model stuck or refusing tools"
+                    return False, f"Model returned {consecutive_empty} consecutive empty responses - model stuck or refusing tools"
             else:
                 consecutive_empty = 0
             if finish_reason in ("stop", "length"):
                 # Nudge the model
                 messages.append({
                     "role": "user",
-                    "content": "Call a tool now. Do not output text — make a tool call immediately."
+                    "content": "Call a tool now. Do not output text - make a tool call immediately."
                 })
                 tool_call_count += 1
                 continue
@@ -561,7 +583,7 @@ def run_story_loop(story: dict, cfg: dict, log: logging.Logger, dry_run: bool = 
         ctx_tokens = estimate_messages_tokens(messages)
         max_ctx = cfg.get("max_context_tokens", 262000)
         if ctx_tokens > max_ctx:
-            msg = f"Message history too large ({ctx_tokens} est tokens > {max_ctx} limit) — stopping to avoid OOM."
+            msg = f"Message history too large ({ctx_tokens} est tokens > {max_ctx} limit) - stopping to avoid OOM."
             log.error(msg)
             return False, msg
         log.info(f"Context size: ~{ctx_tokens} tokens")
@@ -599,7 +621,7 @@ def run_story_loop(story: dict, cfg: dict, log: logging.Logger, dry_run: bool = 
             result = execute_tool(name, args)
             result_str = str(result)
             if len(result_str) > TOOL_RESULT_MAX_CHARS:
-                result_str = result_str[:TOOL_RESULT_MAX_CHARS] + f"\n[... truncated — {len(result_str)} chars total]"
+                result_str = result_str[:TOOL_RESULT_MAX_CHARS] + f"\n[... truncated - {len(result_str)} chars total]"
                 log.info(f"Tool result ({name}): truncated to {TOOL_RESULT_MAX_CHARS} chars")
             else:
                 log.info(f"Tool result ({name}): {result_str[:200]}")
@@ -675,7 +697,7 @@ def notify(msg: str, log: logging.Logger) -> None:
     # Prefer env var (set by ralph.sh sourcing .env), fall back to file parse
     token = os.environ.get("TELEGRAM_BOT_TOKEN")
     if not token:
-        env_path = Path.home() / ".env"
+        env_path = Path.home() / ".openclaw" / ".env"
         if env_path.exists():
             for line in env_path.read_text().splitlines():
                 m = re.match(r'(?:export\s+)?TELEGRAM_BOT_TOKEN=["\']?([^"\'\\s]+)["\']?', line)
@@ -683,22 +705,13 @@ def notify(msg: str, log: logging.Logger) -> None:
                     token = m.group(1)
                     break
     if not token:
-        log.warning("TELEGRAM_BOT_TOKEN not found — cannot notify")
+        log.warning("TELEGRAM_BOT_TOKEN not found - cannot notify")
         return
-    chat_id = os.environ.get("TELEGRAM_CHAT_ID", "")
-    if not chat_id:
-        # Try to parse from env file
-        if env_path and Path(env_path).exists():
-            for line in Path(env_path).read_text().splitlines():
-                import re as _re
-                m = _re.match(r'(?:export\s+)?TELEGRAM_CHAT_ID=["\']?([^"\'\\s]+)["\']?', line)
-                if m:
-                    chat_id = m.group(1)
-                    break
+    chat_id = "374999219"
     try:
         resp = requests.post(
             f"https://api.telegram.org/bot{token}/sendMessage",
-            json={"chat_id": chat_id, "text": f"📊 Ralph: {msg}"},
+            json={"chat_id": chat_id, "text": f"_ Ralph: {msg}"},
             timeout=10,
         )
         if resp.ok:
@@ -714,10 +727,10 @@ def notify(msg: str, log: logging.Logger) -> None:
 # ---------------------------------------------------------------------------
 
 def main():
-    parser = argparse.ArgumentParser(description="Ralph Loop — autonomous coding agent")
+    parser = argparse.ArgumentParser(description="Ralph Loop - autonomous coding agent")
     parser.add_argument("slug", nargs="?", help="Project slug (matches ralph/projects/<slug>/)")
     parser.add_argument("--story", help="Force a specific story ID")
-    parser.add_argument("--dry-run", action="store_true", help="Plan only — don't call model or commit")
+    parser.add_argument("--dry-run", action="store_true", help="Plan only - don't call model or commit")
     parser.add_argument("--max-iterations", type=int, default=None)
     parser.add_argument("--list-projects", action="store_true", help="List all active project slugs and exit")
     parser.add_argument("--version", action="store_true", help="Print ralph version and exit")
@@ -753,7 +766,7 @@ def main():
     # Lock
     if not args.dry_run:
         if not acquire_lock(args.slug):
-            log.error(f"Project '{args.slug}' is locked — another ralph process may be running.")
+            log.error(f"Project '{args.slug}' is locked - another ralph process may be running.")
             sys.exit(1)
 
     try:
@@ -786,8 +799,19 @@ def _run(args, cfg: dict, log: logging.Logger):
         log.info("All stories complete!")
         notify(f"All stories complete in '{slug}'", log)
     elif any_blocked(prd, cfg.get("max_attempts_per_story", 3)):
-        log.warning("Some stories have hit max attempts — manual intervention needed.")
-        notify(f"⚠️ '{slug}' blocked — manual intervention needed", log)
+        max_att = cfg.get("max_attempts_per_story", 3)
+        blocked = get_blocked_stories(prd, max_att)
+        for b_story in blocked:
+            mark_story_blocked(prd, b_story["id"], b_story.get("error", "max attempts reached"))
+        save_prd(slug, prd)
+        # Build rich notification with story ID + last error for each blocked story
+        lines = [f"_ Ralph blocked in '{slug}' - manual intervention needed"]
+        for b_story in blocked:
+            sid = b_story["id"]
+            reason = b_story.get("error", "unknown")[:120]
+            lines.append(f"  * {sid}: {reason}")
+        notify("\n".join(lines), log)
+        log.warning("\n".join(lines))
 
 
 

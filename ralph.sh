@@ -73,9 +73,7 @@ echo "=== Ralph Loop: $SLUG ===" >> "$LOG_FILE"
 cd "$WORKSPACE_DIR"
 
 # Load credentials so ralph.py has TELEGRAM_BOT_TOKEN etc in environment
-if [ -f "$HOME/.env" ]; then
-    source "$HOME/.env"
-elif [ -f "$HOME/.openclaw/.env" ]; then
+if [ -f "$HOME/.openclaw/.env" ]; then
     set -a
     source "$HOME/.openclaw/.env"
     set +a
@@ -85,6 +83,11 @@ fi
 nohup $PYTHON "$RALPH_PY" "$SLUG" $EXTRA_ARGS >> "$LOG_FILE" 2>&1 &
 RALPH_PID=$!
 echo "Ralph started: PID=$RALPH_PID log=$LOG_FILE"
+
+# Wait for Ralph to finish so sequential callers don't stack parallel runs
+wait $RALPH_PID
+RALPH_EXIT=$?
+echo "Ralph finished: PID=$RALPH_PID exit=$RALPH_EXIT"
 
 # Rotate logs — keep last 20 per project, delete older
 ls -t "$LOG_DIR"/${SLUG}-*.log 2>/dev/null | tail -n +21 | xargs rm -f 2>/dev/null || true
