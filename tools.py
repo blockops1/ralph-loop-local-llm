@@ -183,8 +183,8 @@ def tool_read_file(path: str) -> str:
     try:
         content = resolved.read_text(encoding="utf-8")
         lines = content.splitlines()
-        if len(lines) > 500:
-            return "\n".join(lines[:500]) + f"\n... [truncated - {len(lines)} total lines]"
+        if len(lines) > 2000:
+            return "\n".join(lines[:2000]) + f"\n... [truncated — {len(lines)} total lines]"
         return content
     except Exception as e:
         return f"ERROR reading file: {e}"

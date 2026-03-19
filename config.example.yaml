@@ -1,7 +1,7 @@
 # Ralph Loop Configuration
 
 model_url: "http://localhost:11434/v1"
-model_id: "Qwen3.5-35B-A3B-Q4_K_M.gguf"
+model_id: "Qwen_Qwen3.5-35B-A3B-Q4_K_M.gguf"
 
 # Loop limits
 max_iterations: 20          # Max stories to process in one ralph.sh run

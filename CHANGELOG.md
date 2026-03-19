@@ -1,5 +1,41 @@
 # Changelog
 
+## v0.4.0 — 2026-03-19
+
+### New: subprocess story runner (loop_runner.py)
+
+Each story now runs in a fresh subprocess. This gives clean memory isolation between stories — no state leakage from a crashed or stuck story into the next one. `loop_runner.py` spawns `ralph.py --single-story` per story, reads the result from a sidecar JSON file, and continues the loop.
+
+### New: prd_linter.py
+
+A standalone PRD linter that validates `prd.json` before running. Catches common errors:
+- Missing required fields (`id`, `title`, `acceptanceCriteria`)
+- Invalid status values
+- Circular `dependsOn` references
+- Malformed `contextFiles` paths
+
+Run standalone: `python3 prd_linter.py path/to/prd.json`
+
+### New: contextFiles pre-loaded into system prompt
+
+Files listed in `contextFiles` are now read and injected directly into the story prompt at start. Ralph sees the file contents without needing a `read_file` call — eliminates re-read loops on files that get pushed out of working context. Files that don't exist yet show a `(create it)` placeholder so Ralph knows to create them.
+
+### Improved: notify_watcher.py uses Telegram Bot API directly
+
+Previously used the `openclaw` CLI (non-portable). Now uses `requests` + Telegram Bot API directly. Requires `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` env vars — no OpenClaw dependency.
+
+### Improved: read_file truncation limit raised 500 → 2000 lines
+
+Large files no longer get aggressively truncated. Aligns with llama-server's 65k context window.
+
+### Bug fixes
+
+- `load_config()` accepts optional `config_path` argument — useful for testing alternate configs
+- PRD story_summary handles missing `title` field gracefully
+- `notify_watcher.py` sends each line as a separate message instead of batching (cleaner on mobile)
+
+---
+
 ## v0.3.0 — 2026-03-17
 
 ### Switched from Ollama to llama.cpp (llama-server)
