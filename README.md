@@ -54,31 +54,48 @@ huggingface-cli download bartowski/Qwen_Qwen3.5-35B-A3B-GGUF \
 ### Starting llama-server
 
 ```bash
+# 35B — surgical edits, large existing files
 llama-server \
   --model ~/llama-models/Qwen_Qwen3.5-35B-A3B-Q4_K_M.gguf \
   --port 11434 \
-  --ctx-size 65536 \
+  --ctx-size 131072 \
+  --flash-attn on \
+  --jinja \
+  -ngl 99
+
+# 122B — new file creation, large-file stories (run on separate port, not simultaneously with 35B)
+llama-server \
+  --model ~/llama-models/Qwen_Qwen3.5-122B-A10B-Q4_K_M.gguf \
+  --port 11435 \
+  --ctx-size 131072 \
   --flash-attn on \
   --jinja \
   -ngl 99
 ```
 
-`-ngl 99` offloads all layers to GPU (Metal on Apple Silicon). `--flash-attn on` is required (bare `--flash-attn` flag not accepted in llama.cpp ≥ b5000).
+`-ngl 99` offloads all layers to GPU (Metal on Apple Silicon, or adjust for your GPU VRAM). `--flash-attn on` is required — the bare `--flash-attn` flag is not accepted in llama.cpp ≥ b5000. `--jinja` is required for reliable tool calls — do not omit it.
 
 ### Confirmed model compatibility
 
 | Model | Works? | Notes |
 |-------|--------|-------|
-| `Qwen3.5-35B-A3B-Q4_K_M.gguf` | ✅ Yes | Primary tested model. Fast, reliable tool calls. |
-| `qwen3.5:35b` (Ollama) | ✅ Yes | Works but less stable under load. |
-| `qwen3.5:122b` (Ollama) | ⚠️ Partial | Unreliable at scale. |
+| `Qwen3.5-35B-A3B-Q4_K_M.gguf` | ✅ Yes | Primary tested model. Fast (~5-8 tok/s on CPU). Best for edits to large existing files. Use `--ctx-size 131072`. |
+| `Qwen3.5-122B-A10B-Q4_K_M.gguf` | ✅ Yes | Stable at scale with large context window. Best for new file creation and large-file stories. Use `--ctx-size 131072`. ~3× slower than 35B. |
+| `qwen3.5:35b` (Ollama) | ⚠️ Partial | Works but less stable than llama-server for tool calls. |
 | Other OpenAI-compat endpoints | ❓ Untested | Must support tool calls. |
+
+> **Note on 35B vs 122B:** Both models work well — they serve different use cases. Run them as **separate llama-server instances on different ports** but never simultaneously (they compete for memory). Serialize runs.
+
+### Why llama-server over Ollama for tool calls?
+
+Beyond the KV cache stability improvement, llama-server handles tool calls more reliably than Ollama. Ollama can silently drop `--jinja` flag behavior; llama-server with `--jinja` produces consistent, well-formed tool call JSON across both model sizes.
 
 ### Known Qwen3.5 quirks (handled automatically)
 
-- **Thinking model:** Ralph disables thinking via `chat_template_kwargs: {"enable_thinking": False}` (llama-server syntax). Without this, the model fills context with `<think>` blocks and stops after `<tool_calls>`.
+- **Thinking model:** Ralph disables thinking via `chat_template_kwargs: {"enable_thinking": false}` (llama-server syntax). Do NOT use `"thinking": {"type": "disabled"}` — it is silently ignored. Without disabling, the model fills context with `<think>` blocks and stops after `<tool_calls>`.
 - **Em-dash generation:** The model occasionally generates Unicode em-dashes and curly quotes in Python code. Ralph's `write_file` strips all non-ASCII from `.py` files before writing.
 - **`<tool_calls>` truncation:** On large contexts, the model may emit `finish=stop` immediately after opening `<tool_calls>`. Ralph detects and retries.
+- **`--jinja` is required:** Without it, tool calls are silently malformed. Always include `--jinja` in your llama-server launch command.
 
 ---
 
