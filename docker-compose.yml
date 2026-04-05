@@ -1,0 +1,22 @@
+services:
+  ralph:
+    build: .
+    image: ralph-local:latest
+    container_name: ralph
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    env_file:
+      - ${HOME}/.hermes/.env
+    environment:
+      - RALPH_DIR=/app
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ~/ralph/projects:/app/projects
+      - ralph-logs:/app/logs
+    restart: "no"
+    stdin_open: true
+    tty: true
+
+volumes:
+  ralph-logs:
+    driver: local

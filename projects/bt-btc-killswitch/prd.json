@@ -1,0 +1,29 @@
+{
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Replace hardcoded BTC change with live CoinGecko price check",
+      "description": "Current state: run_pipeline.py at businesses/horizen-zkverify/base-trader/scripts/run_pipeline.py has btc_change_4h = 0.5 hardcoded. The macro kill switch in signal_filter.py checks btc_change_4h < -3.0 but it never fires because the value is always +0.5.\n\nWhat to build:\n1. Add get_btc_4h_change() function to run_pipeline.py (or a new utils module):\n   - Call CoinGecko free API: GET https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=1\n   - This returns hourly price points for the last 24h (no API key needed)\n   - Extract the price from ~4 hours ago and the current price\n   - Calculate: btc_change_4h = ((current - price_4h_ago) / price_4h_ago) * 100\n   - Return the float (negative if BTC dropped)\n   - On error: return 0.0 (neutral \u2014 don't kill switch on API failure)\n   - Add a 10-second timeout to prevent pipeline stall\n\n2. In main(), replace:\n     btc_change_4h = 0.5\n   with:\n     btc_change_4h = get_btc_4h_change()\n     print(f'[PIPELINE] BTC 4h change: {btc_change_4h:+.1f}%')\n\nConstraints:\n- Do NOT modify signal_filter.py or any other script\n- CoinGecko free tier: 10-30 calls/min \u2014 one call per 30-min pipeline run is well within limits\n- No API key needed \u2014 CoinGecko free tier is sufficient\n- Function must handle rate limiting (429) gracefully \u2014 return 0.0 on any error",
+      "acceptanceCriteria": [
+        "python3 -m py_compile businesses/horizen-zkverify/base-trader/scripts/run_pipeline.py",
+        "grep -q 'get_btc_4h_change' businesses/horizen-zkverify/base-trader/scripts/run_pipeline.py",
+        "grep -qv 'btc_change_4h = 0.5' businesses/horizen-zkverify/base-trader/scripts/run_pipeline.py"
+      ],
+      "qualityChecks": [
+        "python3 -m py_compile businesses/horizen-zkverify/base-trader/scripts/run_pipeline.py"
+      ],
+      "priority": 1,
+      "passes": true,
+      "attempts": 1,
+      "dependsOn": [],
+      "dependencyPolicy": "block",
+      "contextFiles": [
+        "businesses/horizen-zkverify/base-trader/scripts/run_pipeline.py"
+      ],
+      "_slug": "bt-btc-killswitch",
+      "lastAttempt": "2026-03-17T21:43:51.920536+00:00",
+      "error": "Model API error: 500 Client Error: Internal Server Error for url: http://localhost:11434/v1/chat/completions \u2014 body: {\"error\":{\"code\":500,\"message\":\"Context size has been exceeded.\",\"type\":\"server_error\"}}",
+      "notes": "Implemented US-001: Added get_btc_4h_change() function to fetch BTC 4h price change from CoinGecko free API (GET /coins/bitcoin/market_chart?vs_currency=usd&days=1). Function extracts current price an"
+    }
+  ]
+}

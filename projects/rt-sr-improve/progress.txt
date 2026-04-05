@@ -1,0 +1,21 @@
+# Ralph Progress Log - rt-sr-improve
+Started: 2026-03-17T19:23:15.131526
+---
+
+## [2026-03-17 19:27]
+✅ US-001: Add fallback lookback cascade to range-trader support_resistance.py
+Implemented fallback lookback cascade in support_resistance.py:
+
+1. Added `_calculate_sr_with_lookback()` helper to avoid code duplication
+2. Added `calculate_sr_with_fallback()` function with cascade:
+   - Tries daily lookback=7, 5, 3 in order
+   - Falls back to hourly lookback=5 if provided
+   - R
+
+## [2026-03-17 19:28]
+✅ US-001: Add fallback lookback cascade to range-trader support_resistance.py
+Implemented fallback lookback cascade for support_resistance.py (US-001):
+
+1. Added `calculate_sr_with_fallback()` function that tries lookback=7, 5, 3 on daily candles, then lookback=5 on hourly candles if provided. Each method returns `sr_method` and `min_quality` keys.
+
+2. Updated `range_scanner.

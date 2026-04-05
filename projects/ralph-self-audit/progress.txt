@@ -1,0 +1,27 @@
+# Ralph Progress Log - ralph-self-audit
+Started: 2026-03-27T21:28:18.479309
+---
+
+## [2026-03-27 21:42]
+❌ REV-A FAILED
+$ grep -c 'ralph.py:' ralph/projects/ralph-self-audit/review.md
+ERROR: 'vi' is not an allowed command. Use only safe read-only or code-analysis commands. If you need a specific tool, ask your manager to add it to the allowlist.
+
+## [2026-03-27 21:58]
+❌ REV-A FAILED
+$ grep -c 'ralph.py:' ralph/projects/ralph-self-audit/review.md
+ERROR: 'vi' is not an allowed command. Use only safe read-only or code-analysis commands. If you need a specific tool, ask your manager to add it to the allowlist.
+
+## [2026-03-27 22:12]
+❌ REV-A FAILED
+$ grep -c 'ralph.py:' ralph/projects/ralph-self-audit/review.md
+ERROR: 'vi' is not an allowed command. Use only safe read-only or code-analysis commands. If you need a specific tool, ask your manager to add it to the allowlist.
+
+## [2026-03-27 22:21]
+❌ REV-A FAILED
+$ grep -c 'ralph.py:' ralph/projects/ralph-self-audit/review.md
+ERROR: 'vi' is not an allowed command. Use only safe read-only or code-analysis commands. If you need a specific tool, ask your manager to add it to the allowlist.
+
+## [2026-03-27 22:40]
+❌ REV-A FAILED
+Model API error: 400 Client Error: Bad Request for url: http://localhost:8091/v1/chat/completions - body: {"error":{"code":400,"message":"request (33679 tokens) exceeds the available context size (32768 tokens), try increasing it","type":"exceed_context_size_error","n_prompt_tokens":33679,"n_ctx":32

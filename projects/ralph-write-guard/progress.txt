@@ -1,0 +1,7 @@
+# Ralph Progress Log — ralph-write-guard
+Started: 2026-03-17T18:43:53.213057
+---
+
+## [2026-03-17 18:49]
+✅ US-001: Add truncation artifact guard to tool_write_file() in tools.py
+Implemented truncation artifact guard in tool_write_file() by adding a check at the start of the function that rejects content containing known truncation markers (e.g., "... [truncated", "[truncated —", etc.). When detected, it returns an actionable error message instructing the model to re-read th

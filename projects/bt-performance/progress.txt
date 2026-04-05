@@ -1,0 +1,10 @@
+# Ralph Progress Log — bt-performance
+Started: 2026-03-17T17:30:56.571833
+---
+
+## [2026-03-17 17:42]
+✅ US-001: Create performance.py — cumulative P&L and system metrics calculator
+Implemented US-001: Created performance.py that computes cumulative P&L and system metrics from trade_log.jsonl, positions.json, signal_log.jsonl, and run_log.jsonl. The script:
+
+1. Reads all required data files from the data/ directory
+2. Computes all 16 metrics including realized/unrealized P&L, w

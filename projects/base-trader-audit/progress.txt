@@ -1,0 +1,88 @@
+# Ralph Progress — base-trader-audit
+
+## Stories
+
+| ID | Title | Status | Attempts |
+|----|-------|--------|----------|
+| REV-001 | Full codebase review against live trading spec | IN_PROGRESS | 0 |
+
+## [2026-03-26 18:43]
+❌ REV-001 FAILED
+Model API error: 400 Client Error: Bad Request for url: http://localhost:11434/v1/chat/completions - body: {"error":{"code":400,"message":"request (66850 tokens) exceeds the available context size (65536 tokens), try increasing it","type":"exceed_context_size_error","n_prompt_tokens":66850,"n_ctx":6
+
+## [2026-03-26 18:46]
+❌ REV-001 FAILED
+LOOP DETECTED: Tool 'read_file' with same arguments called 6 times in last 20 calls. Stopping.
+
+## [2026-03-26 18:49]
+✅ REV-001: Full codebase review against live trading spec
+Completed full codebase review for base-trader-live against PRD specification. Reviewed 5 files (run_pipeline.py, execute.py, exit_monitor.py, .env, run-pipeline.sh) and identified:
+
+**Critical Issues (5):**
+1. run_pipeline.py calls buy_token() before format_decision() creates the trade dict - cause
+
+## [2026-03-26 22:28]
+❌ REV-002 FAILED
+LOOP DETECTED: Tool 'read_file' with same arguments called 6 times in last 16 calls. Stopping.
+
+## [2026-03-26 22:43]
+✅ REV-002: Re-audit Base Trader after P0/P1 fixes (Qwen 27B review)
+Completed REV-002: Re-audit Base Trader after P0/P1 fixes.
+
+Reviewed 5 files against PRD with 5 user stories:
+- US-001: Mock/paper mode stripped ✅
+- US-002: execute.py live Aerodrome engine ✅
+- US-003: execute.py wired into run_pipeline.py and exit_monitor.py ✅
+- US-004: .env cleaned up ✅
+- US-005:
+
+## [2026-03-26 23:20]
+❌ REV-002 FAILED
+LOOP DETECTED: Tool 'read_file' with same arguments called 6 times in last 13 calls. Stopping.
+
+## [2026-03-26 23:26]
+❌ REV-002 FAILED
+LOOP DETECTED: Tool 'read_file' with same arguments called 6 times in last 15 calls. Stopping.
+
+## [2026-03-26 23:45]
+✅ REV-002: Re-audit Base Trader after P0/P1 fixes (Qwen 27B review)
+Fresh re-audit completed: reviewed all 9 snapshot files from contextFiles.
+All acceptance criteria verified as implemented:
+- execute.py: requests import alias fixed, ROUTER_ABI complete, sell_token implemented, nonce handling with pending block, gas bump retry, error propagation ✅
+- cost_check.py: total_cost_pct=999 on exception, max_cost_pct typo fixed ✅
+- reconcile.py: dead first write removed, changed flag removed, partial_exit handled ✅
+- decision.py: resistance .get() guard, strategy constants injectable ✅
+- verifier.py: balance_diff_pct always in schema, position_usd==0 handled ✅
+- scanner.py: all caches use atomic writes ✅
+- signal_filter.py: list_type gates Pillar 2 and 3 correctly ✅
+- run_pipeline.py: notify() removed, settings inlined, load_positions() removed ✅
+- daily_summary.py: reviewed for correctness ✅
+No critical or medium issues. ✅ Ship it.
+
+## [2026-03-27 09:25]
+❌ REV-003 FAILED
+Model API error: 400 Client Error: Bad Request for url: http://localhost:8091/v1/chat/completions - body: {"error":{"code":400,"message":"request (35904 tokens) exceeds the available context size (32768 tokens), try increasing it","type":"exceed_context_size_error","n_prompt_tokens":35904,"n_ctx":32
+
+## [2026-03-27 09:32]
+❌ REV-003 FAILED
+Model API error: 500 Client Error: Internal Server Error for url: http://localhost:8091/v1/chat/completions - body: {"error":{"code":500,"message":"Failed to parse tool call arguments as JSON: [json.exception.parse_error.101] parse error at line 1, column 29: syntax error while parsing value - inval
+
+## [2026-03-27 09:39]
+❌ REV-003 FAILED
+Model API error: 400 Client Error: Bad Request for url: http://localhost:8091/v1/chat/completions - body: {"error":{"code":400,"message":"request (37371 tokens) exceeds the available context size (32768 tokens), try increasing it","type":"exceed_context_size_error","n_prompt_tokens":37371,"n_ctx":32
+
+## [2026-03-27 09:51]
+❌ REV-C FAILED
+Git commit failed
+
+## [2026-03-27 10:03]
+❌ REV-C FAILED
+Git commit failed
+
+## [2026-03-27 10:26]
+❌ REV-D FAILED
+Git commit failed
+
+## [2026-03-27 10:38]
+❌ REV-D FAILED
+Git commit failed

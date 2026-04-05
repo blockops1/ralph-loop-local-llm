@@ -1,0 +1,64 @@
+# Ralph Progress Log — base-trader
+Started: 2026-03-12T16:16:13.977760
+Branch: base-trader-1c-final
+---
+
+## [2026-03-12 16:28]
+❌ US-014 FAILED
+Git commit failed
+
+## [2026-03-12 17:02]
+✅ US-015: run_pipeline.py Telegram BUY alerts
+Implemented US-015: Telegram BUY alerts in run_pipeline.py
+
+Changes made:
+1. Added `send_telegram_alert()` function that calls `openclaw message send --target 374999219 --message "..."`
+2. Called immediately after `score_signal()` when `score >= 175` and `action_taken != 'SKIP_OPEN'`
+3. Message form
+
+## [2026-03-13 01:12]
+✅ US-016: data/exit_monitor.py
+✅ US-016: exit_monitor.py implemented
+
+**What was built:**
+- `data/exit_monitor.py` — monitors open positions and executes exits based on 3 conditions:
+  1. **STOP exit**: current_price <= stop_loss → closes position
+  2. **TARGET exit**: current_price >= target → closes position  
+  3. **SM exit**:
+
+## [2026-03-13 02:33]
+✅ US-017: scripts/log_trade_manual.py
+US-017: scripts/log_trade_manual.py — IMPLEMENTED
+
+Created executable Python script that:
+- Reads JSON from stdin with fields: symbol, address, amount_usd, entry_price, support, resistance, tx
+- Appends trade entry to data/trade_log.jsonl
+- Adds/updates position in data/positions.json with status='o
+
+## [2026-03-13 03:40]
+✅ US-018: run-pipeline.sh wrapper script
+US-018: run-pipeline.sh wrapper script — COMPLETED
+
+Simplified the shell script to exactly match the specification:
+- Changed to base-trader directory
+- Set NANSEN_MOCK=0 environment variable
+- Run python3 scripts/run_pipeline.py
+- Redirect stdout/stderr to data/cron.log
+
+Removed unnecessary complex
+
+## [2026-03-13 03:53]
+✅ US-019: LaunchAgents plist
+US-019: Created LaunchAgents plist file at data/com.crestview.base-trader.plist with all required keys: Label, ProgramArguments (pointing to run-pipeline.sh), StartInterval=1800, RunAtLoad=true, KeepAlive=true, and log paths. User must copy to ~/Library/LaunchAgents/ and run 'launchctl load' to inst
+
+## [2026-03-13 04:20]
+✅ US-020: E2E test + docs
+US-020: E2E test + docs — COMPLETED
+
+E2E Test:
+- bash run-pipeline.sh → BUY Telegram alert sent
+- echo BNKR JSON | python3 scripts/log_trade_manual.py → trade logged
+- python3 data/exit_monitor.py → positions checked, exits logged
+
+Documentation:
+- user.md: Added E2E test instructions, updated "What

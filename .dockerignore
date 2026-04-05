@@ -1,0 +1,16 @@
+logs
+projects
+__pycache__
+*.pyc
+*.pyo
+.pyc
+.git
+.github
+*.log
+*.bak
+*.tmp
+.DS_Store
+.env
+*.egg-info
+.venv
+venv

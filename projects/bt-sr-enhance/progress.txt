@@ -1,0 +1,7 @@
+# Ralph Progress Log — bt-sr-enhance
+Started: 2026-03-17T17:30:56.332411
+---
+
+## [2026-03-17 17:42]
+✅ US-001: Extend S/R to 30-day candles and add 4h fallback in support_resistance.py
+Implemented US-001: Added calculate_sr_with_fallback() function that tries multiple strategies (daily_3, hourly_3, daily_2, hourly_2) in order, returning sr_source to indicate which succeeded. Modified calculate_sr() to accept minimum 1 swing low (was 2) and added swing_count dict to output. All acc

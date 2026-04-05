@@ -1,0 +1,218 @@
+{
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "range_signal_filter.py -- filter scanner output into BUY/SELL/HOLD signals",
+      "description": "Current state: range_scanner.py exists at businesses/horizen-zkverify/range-trader/scripts/range_scanner.py and returns scan results. No signal filter exists yet.\n\nWhat to build: Create businesses/horizen-zkverify/range-trader/scripts/range_signal_filter.py\n\nThe file must begin with:\n  import sys\n  from pathlib import Path\n  sys.path.insert(0, str(Path(__file__).parent))\n\nImports: from support_resistance import get_stop_loss\n\nConstants:\n  RANGE_SCORE_MIN = 50\n  ENTRY_BUFFER_PCT = 2.0\n  SCORE_THRESHOLD = 60\n\nFunction: filter_signals(scan_results: list, open_positions: list) -> list\n  - scan_results: list of dicts from range_scanner.scan_all()\n  - open_positions: list of dicts, each has 'symbol' and 'address' keys\n  - Returns list of signal dicts\n\n  For each scan result:\n    - Skip if result['error'] is not None\n    - Skip if result['range_score'] < RANGE_SCORE_MIN\n    - Skip if sr is None\n    - open_symbols = set of symbol values from open_positions\n    - open_addresses = set of address.lower() values from open_positions\n\n    BUY signal conditions (all must be true):\n      1. sr['near_support'] is True\n      2. result['price_usd'] <= sr['entry_price'] * (1 + ENTRY_BUFFER_PCT/100)\n      3. result['symbol'] not in open_symbols\n      4. result['address'].lower() not in open_addresses\n      5. result['range_score'] >= SCORE_THRESHOLD\n    If BUY: append {'action': 'BUY', 'symbol': result['symbol'], 'address': result['address'],\n                     'price_usd': result['price_usd'], 'score': result['range_score'],\n                     'support': sr['support'], 'resistance': sr['resistance'],\n                     'entry_price': sr['entry_price'], 'exit_price': sr['exit_price'],\n                     'stop_loss': get_stop_loss(sr)}\n\n    SELL signal conditions (check for each open position matching this token):\n      Check if result['symbol'] in open_symbols:\n        1. sr['near_resistance'] is True: append SELL signal with reason='target'\n        2. result['price_usd'] <= stop_loss (get_stop_loss(sr)): append SELL signal with reason='stop'\n    If SELL: append {'action': 'SELL', 'symbol': result['symbol'], 'address': result['address'],\n                     'price_usd': result['price_usd'], 'reason': reason,\n                     'stop_loss': get_stop_loss(sr), 'exit_price': sr['exit_price']}\n\n  Return the signals list (may be empty).\n\nConstraints:\n  - Do not call range_scanner from within this file\n  - Do not write any other files\n  - ASCII only, no Unicode dashes or curly quotes",
+      "acceptanceCriteria": [
+        "python3 -m py_compile businesses/horizen-zkverify/range-trader/scripts/range_signal_filter.py",
+        "python3 -c \"import sys; sys.path.insert(0,'businesses/horizen-zkverify/range-trader/scripts'); from range_signal_filter import filter_signals; r=filter_signals([],[]); print(type(r)); assert r==[]\"",
+        "grep -q 'RANGE_SCORE_MIN' businesses/horizen-zkverify/range-trader/scripts/range_signal_filter.py",
+        "grep -q 'near_support' businesses/horizen-zkverify/range-trader/scripts/range_signal_filter.py",
+        "grep -q 'near_resistance' businesses/horizen-zkverify/range-trader/scripts/range_signal_filter.py"
+      ],
+      "qualityChecks": [
+        "python3 -m py_compile businesses/horizen-zkverify/range-trader/scripts/range_signal_filter.py"
+      ],
+      "priority": 1,
+      "passes": true,
+      "attempts": 0,
+      "dependsOn": [],
+      "dependencyPolicy": "block",
+      "contextFiles": [
+        "businesses/horizen-zkverify/range-trader/scripts/support_resistance.py",
+        "businesses/horizen-zkverify/range-trader/scripts/range_scanner.py"
+      ],
+      "_slug": "range-trader-build",
+      "notes": "Created range_signal_filter.py implementing filter_signals() that processes scanner output into BUY/SELL signals. BUY signals require near_support, price within entry buffer, not already open, and sco"
+    },
+    {
+      "id": "US-002",
+      "title": "range_execute.py -- USDC-to-token and token-to-USDC swaps via Aerodrome",
+      "description": "Current state: No range_execute.py exists. The base-trader has businesses/horizen-zkverify/base-trader/scripts/execute.py which swaps ETH<->token. The range-trader uses USDC as quote currency and METAMASK wallet keys.\n\nWhat to build: Create businesses/horizen-zkverify/range-trader/scripts/range_execute.py\n\nKey differences from base-trader execute.py:\n  - Uses METAMASK_WALLET_ADDRESS + METAMASK_WALLET_PRIVATE_KEY env vars (not BASE_WALLET_*)\n  - Buy: USDC->token swap (not ETH->token)\n  - Sell: token->USDC swap (not token->ETH)\n  - USDC contract: 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913 (6 decimals)\n  - Slippage default: 1.5% (not 2%)\n  - ETH floor check: keep >= 0.005 ETH for gas\n\nFile must begin with:\n  import sys\n  from pathlib import Path\n  sys.path.insert(0, str(Path(__file__).parent))\n\nLoad .env from Path.home() / '.openclaw' / '.env' same as base-trader execute.py.\n\nConstants:\n  BASE_RPC = 'https://mainnet.base.org'\n  AERODROME_ROUTER = '0xcF77a3Ba9A5CA399B7c97c74d54e5b1Beb874E43'\n  AERODROME_FACTORY = '0x420DD381b31aEf6683db6B902084cB0FFECe40Da'\n  USDC_ADDRESS = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'\n  USDC_DECIMALS = 6\n  SLIPPAGE_DEFAULT = 0.015\n  SLIPPAGE_MAX = 0.05\n  DEADLINE_SECONDS = 120\n\nROUTER_ABI: must include all 3 functions from base-trader execute.py:\n  swapExactTokensForTokensSupportingFeeOnTransferTokens (for token-to-token: USDC->ZEN, ZEN->USDC)\n  getAmountsOut\n  (also include swapExactETHForTokensSupportingFeeOnTransferTokens and swapExactTokensForETHSupportingFeeOnTransferTokens for completeness but they are not called)\n\nswapExactTokensForTokensSupportingFeeOnTransferTokens ABI:\n  inputs: amountIn uint256, amountOutMin uint256, routes tuple[], to address, deadline uint256\n  outputs: []\n  stateMutability: nonpayable\n\nERC20_ABI: same as base-trader (approve, balanceOf, decimals)\n\nFunction get_account():\n  - reads METAMASK_WALLET_PRIVATE_KEY from env\n  - prepends '0x' if missing\n  - returns Account.from_key(private_key)\n\nFunction get_usdc_balance(w3, address) -> float:\n  - returns USDC balance in USD float (divides by 10^6)\n\nFunction buy_token(token_address: str, amount_usdc: float, slippage: float = SLIPPAGE_DEFAULT) -> dict:\n  - Swaps USDC->token via Aerodrome volatile pool\n  - Route: USDC -> token (direct volatile pool, stable=False)\n  - amount_usdc is in USD float; convert to wei: int(amount_usdc * 10**USDC_DECIMALS)\n  - ETH floor check: if w3.eth.get_balance(account.address) / 1e18 < 0.005: return error 'Insufficient ETH for gas'\n  - Get USDC balance; if usdc_balance < amount_usdc: return error 'Insufficient USDC'\n  - Approve AERODROME_ROUTER to spend amount_usdc_wei from USDC contract\n  - Call getAmountsOut with [USDC->token route] to get expected_out\n  - amount_out_min = int(expected_out * (1 - slippage))\n  - Call swapExactTokensForTokensSupportingFeeOnTransferTokens\n  - nonce: w3.eth.get_transaction_count(account.address, 'pending')\n  - gas: 300000, chainId: 8453\n  - maxFeePerGas: w3.eth.gas_price * 2, maxPriorityFeePerGas: w3.to_wei('0.001', 'gwei')\n  - Wait for receipt (timeout=60)\n  - Return dict: {'action':'BUY','token_address':token_address,'amount_usdc':amount_usdc,'tx_hash':tx_hash_hex,'status':'ok' or 'failed','error':None or str,'ts':iso_utc}\n\nFunction sell_token(token_address: str, sell_pct: float = 1.0, slippage: float = SLIPPAGE_DEFAULT) -> dict:\n  - Swaps token->USDC via Aerodrome volatile pool\n  - Route: token -> USDC (direct volatile pool, stable=False)\n  - Get token decimals from contract\n  - amount_in = int(token_balance * sell_pct)\n  - Approve AERODROME_ROUTER to spend amount_in from token contract\n  - Call getAmountsOut with [token->USDC route]\n  - amount_out_min = int(expected_out * (1 - slippage))\n  - Call swapExactTokensForTokensSupportingFeeOnTransferTokens\n  - Return dict: {'action':'SELL','token_address':token_address,'sell_pct':sell_pct,'tx_hash':tx_hash_hex,'status':'ok' or 'failed','error':None or str,'ts':iso_utc}\n\nif __name__ == '__main__': block with --check flag:\n  - Connect to Base, load account (METAMASK keys)\n  - Print wallet address, ETH balance, USDC balance\n  - Print 'Chain ID: {w3.eth.chain_id}'\n\nConstraints:\n  - ASCII only, no Unicode\n  - Do not write any other files",
+      "acceptanceCriteria": [
+        "python3 -m py_compile businesses/horizen-zkverify/range-trader/scripts/range_execute.py",
+        "grep -q 'METAMASK_WALLET_PRIVATE_KEY' businesses/horizen-zkverify/range-trader/scripts/range_execute.py",
+        "grep -q 'USDC_ADDRESS' businesses/horizen-zkverify/range-trader/scripts/range_execute.py",
+        "grep -q 'swapExactTokensForTokensSupportingFeeOnTransferTokens' businesses/horizen-zkverify/range-trader/scripts/range_execute.py",
+        "python3 businesses/horizen-zkverify/range-trader/scripts/range_execute.py --check"
+      ],
+      "qualityChecks": [
+        "python3 -m py_compile businesses/horizen-zkverify/range-trader/scripts/range_execute.py"
+      ],
+      "priority": 2,
+      "passes": true,
+      "attempts": 0,
+      "dependsOn": [],
+      "dependencyPolicy": "block",
+      "contextFiles": [
+        "businesses/horizen-zkverify/base-trader/scripts/execute.py"
+      ],
+      "_slug": "range-trader-build",
+      "notes": "Created range_execute.py implementing USDC-based token swaps via Aerodrome. Key changes: uses METAMASK_WALLET_PRIVATE_KEY env vars, USDC contract (0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913) with 6 de"
+    },
+    {
+      "id": "US-003",
+      "title": "range_positions.py -- positions file manager (load/save/update)",
+      "description": "Current state: No positions manager exists for range-trader. Data dir is businesses/horizen-zkverify/range-trader/data/. Base-trader embeds position management inside run_pipeline.py -- for range-trader we separate it.\n\nWhat to build: Create businesses/horizen-zkverify/range-trader/scripts/range_positions.py\n\nPositions file path: businesses/horizen-zkverify/range-trader/data/range_positions.json\nFormat: a JSON list of position dicts.\n\nEach position dict fields:\n  symbol (str), address (str, lowercase), entry_price (float), entry_usdc (float),\n  stop_loss (float), exit_price (float), score (int), support (float), resistance (float),\n  tokens_held (float), entry_ts (str ISO UTC), tx_hash (str)\n\nFile must begin with:\n  import sys\n  from pathlib import Path\n  sys.path.insert(0, str(Path(__file__).parent))\n\nConstants:\n  POSITIONS_FILE = Path(__file__).parent.parent / 'data' / 'range_positions.json'\n\nFunctions:\n\nload_positions() -> list:\n  - If file does not exist: return []\n  - Read and parse JSON. If parse error: print warning, return []\n\nsave_positions(positions: list):\n  - POSITIONS_FILE.parent.mkdir(parents=True, exist_ok=True)\n  - Write JSON with indent=2\n\nadd_position(pos: dict):\n  - positions = load_positions()\n  - Remove any existing position with same symbol (only one position per symbol)\n  - Append pos\n  - save_positions(positions)\n\nremove_position(symbol: str):\n  - positions = load_positions()\n  - Filter out positions where p['symbol'] == symbol\n  - save_positions(remaining)\n\nget_position(symbol: str) -> dict or None:\n  - Return first position with matching symbol, or None\n\nConstraints:\n  - ASCII only, no Unicode\n  - Do not write any other files",
+      "acceptanceCriteria": [
+        "python3 -m py_compile businesses/horizen-zkverify/range-trader/scripts/range_positions.py",
+        "python3 -c \"import sys; sys.path.insert(0,'businesses/horizen-zkverify/range-trader/scripts'); from range_positions import load_positions, save_positions, add_position, remove_position; p={'symbol':'TEST','address':'0x1','entry_price':1.0,'entry_usdc':100.0,'stop_loss':0.97,'exit_price':1.2,'score':80,'support':1.0,'resistance':1.2,'tokens_held':100.0,'entry_ts':'2026-01-01T00:00:00Z','tx_hash':'0xabc'}; add_position(p); assert get_position('TEST') is not None; remove_position('TEST'); assert load_positions() == [] or all(x['symbol'] != 'TEST' for x in load_positions())\" 2>/dev/null || python3 -c \"import sys; sys.path.insert(0,'businesses/horizen-zkverify/range-trader/scripts'); from range_positions import load_positions, add_position, remove_position, get_position; p={'symbol':'TEST','address':'0x1','entry_price':1.0,'entry_usdc':100.0,'stop_loss':0.97,'exit_price':1.2,'score':80,'support':1.0,'resistance':1.2,'tokens_held':100.0,'entry_ts':'2026-01-01T00:00:00Z','tx_hash':'0xabc'}; add_position(p); pos=get_position('TEST'); assert pos is not None, 'get failed'; remove_position('TEST'); remainder=load_positions(); assert all(x['symbol']!='TEST' for x in remainder), 'remove failed'; print('OK')\"",
+        "grep -q 'range_positions.json' businesses/horizen-zkverify/range-trader/scripts/range_positions.py"
+      ],
+      "qualityChecks": [
+        "python3 -m py_compile businesses/horizen-zkverify/range-trader/scripts/range_positions.py"
+      ],
+      "priority": 3,
+      "passes": true,
+      "attempts": 0,
+      "dependsOn": [],
+      "dependencyPolicy": "block",
+      "contextFiles": [],
+      "_slug": "range-trader-build",
+      "notes": "Created range_positions.py implementing a positions file manager with load_positions(), save_positions(), add_position(), remove_position(), and get_position() functions. The file uses JSON format wit"
+    },
+    {
+      "id": "US-004",
+      "title": "run_range_pipeline.py -- main orchestrator: scan -> filter -> execute -> log",
+      "description": "Current state: range_scanner.py, range_signal_filter.py (US-001), range_execute.py (US-002), range_positions.py (US-003) all exist in businesses/horizen-zkverify/range-trader/scripts/.\n\nWhat to build: Create businesses/horizen-zkverify/range-trader/scripts/run_range_pipeline.py\n\nFile must begin with:\n  import sys\n  from pathlib import Path\n  sys.path.insert(0, str(Path(__file__).parent))\n\nLoad .env from Path.home() / '.openclaw' / '.env'\n\nImports:\n  from range_scanner import scan_all\n  from range_signal_filter import filter_signals\n  from range_execute import buy_token, sell_token, get_usdc_balance, get_account\n  from range_positions import load_positions, add_position, remove_position\n  from web3 import Web3\n\nConstants:\n  MAX_POSITIONS = 4\n  POSITION_SIZE_PCT = 0.25  # 25% of USDC balance per position\n  MIN_USDC_TRADE = 10.0\n  BASE_RPC = 'https://mainnet.base.org'\n  USDC_ADDRESS = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'\n  DATA_DIR = Path(__file__).parent.parent / 'data'\n  TRADE_LOG = DATA_DIR / 'range_trade_log.jsonl'\n  RUN_LOG = DATA_DIR / 'range_run_log.jsonl'\n  CREDIT_LOG = DATA_DIR / 'range_credit_log.jsonl'\n  LOCKFILE = DATA_DIR / 'range_pipeline.lock'\n\nPID lockfile logic (same as base-trader run_pipeline.py):\n  - On start: check if LOCKFILE exists and PID inside is still running\n  - If running: print 'Pipeline already running (PID X)' and sys.exit(0)\n  - If stale: remove lockfile\n  - Write own PID to LOCKFILE\n  - Use try/finally to always remove lockfile on exit\n\nFunction write_trade_log(entry: dict):\n  - Append JSON line to TRADE_LOG\n  - DATA_DIR.mkdir(parents=True, exist_ok=True)\n\nFunction write_run_log(run_id, duration_s, tokens_scanned, trades_executed, errors, credits_used):\n  - Append JSON line to RUN_LOG with all fields + ts (ISO UTC)\n\nFunction get_usdc_pipeline(w3) -> float:\n  - Return USDC balance for METAMASK_WALLET_ADDRESS using USDC_ADDRESS contract\n  - ERC20 ABI: balanceOf(address) returns uint256, decimals() returns uint8\n\nFunction main():\n  import time, json\n  from datetime import datetime, timezone\n  run_id = datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')\n  start_time = time.time()\n  trades_executed = 0\n  errors = []\n\n  w3 = Web3(Web3.HTTPProvider(BASE_RPC, request_kwargs={'timeout': 30}))\n  if not w3.is_connected():\n    print('[PIPELINE] Cannot connect to Base RPC')\n    sys.exit(1)\n\n  # Scan\n  print('[PIPELINE] Scanning tokens...')\n  scan_results = scan_all()\n  tokens_scanned = len([r for r in scan_results if not r.get('error')])\n\n  # Load positions\n  positions = load_positions()\n\n  # Filter\n  signals = filter_signals(scan_results, positions)\n  print(f'[PIPELINE] Signals: {len(signals)}')\n\n  # Execute SELL signals first (free up USDC before buying)\n  for sig in [s for s in signals if s['action'] == 'SELL']:\n    print(f'[PIPELINE] SELL {sig[\"symbol\"]} reason={sig[\"reason\"]}')\n    result = sell_token(sig['address'])\n    log_entry = {**sig, **result, 'run_id': run_id}\n    write_trade_log(log_entry)\n    if result['status'] == 'ok':\n      remove_position(sig['symbol'])\n      trades_executed += 1\n    else:\n      errors.append(f'SELL {sig[\"symbol\"]}: {result[\"error\"]}')\n\n  # Reload positions after sells\n  positions = load_positions()\n\n  # Execute BUY signals\n  for sig in [s for s in signals if s['action'] == 'BUY']:\n    if len(positions) >= MAX_POSITIONS:\n      print(f'[PIPELINE] Max positions ({MAX_POSITIONS}) reached, skipping {sig[\"symbol\"]}')\n      break\n    usdc_balance = get_usdc_pipeline(w3)\n    amount_usdc = usdc_balance * POSITION_SIZE_PCT\n    if amount_usdc < MIN_USDC_TRADE:\n      print(f'[PIPELINE] USDC too low (${usdc_balance:.2f}), skipping')\n      break\n    print(f'[PIPELINE] BUY {sig[\"symbol\"]} ${amount_usdc:.2f} USDC')\n    result = buy_token(sig['address'], amount_usdc)\n    log_entry = {**sig, **result, 'run_id': run_id}\n    write_trade_log(log_entry)\n    if result['status'] == 'ok':\n      # Calculate tokens_held from the buy result\n      # Fetch actual token balance from chain\n      from range_execute import ERC20_ABI\n      tok = w3.eth.contract(address=Web3.to_checksum_address(sig['address']), abi=ERC20_ABI)\n      decimals = tok.functions.decimals().call()\n      raw_bal = tok.functions.balanceOf(Web3.to_checksum_address(os.environ.get('METAMASK_WALLET_ADDRESS',''))).call()\n      tokens_held = raw_bal / (10 ** decimals)\n      pos = {\n        'symbol': sig['symbol'],\n        'address': sig['address'].lower(),\n        'entry_price': sig['price_usd'],\n        'entry_usdc': amount_usdc,\n        'stop_loss': sig['stop_loss'],\n        'exit_price': sig['exit_price'],\n        'score': sig['score'],\n        'support': sig['support'],\n        'resistance': sig['resistance'],\n        'tokens_held': tokens_held,\n        'entry_ts': datetime.now(timezone.utc).isoformat(),\n        'tx_hash': result.get('tx_hash', '')\n      }\n      add_position(pos)\n      positions = load_positions()\n      trades_executed += 1\n    else:\n      errors.append(f'BUY {sig[\"symbol\"]}: {result[\"error\"]}')\n\n  duration_s = round(time.time() - start_time, 1)\n  write_run_log(run_id, duration_s, tokens_scanned, trades_executed, errors, credits_used=0)\n  print(f'[PIPELINE] Done. trades={trades_executed} errors={len(errors)} duration={duration_s}s')\n\nif __name__ == '__main__':\n  LOCKFILE.parent.mkdir(parents=True, exist_ok=True)\n  if LOCKFILE.exists():\n    try:\n      pid = int(LOCKFILE.read_text().strip())\n      import psutil\n      if psutil.pid_exists(pid):\n        print(f'[PIPELINE] Already running (PID {pid})')\n        sys.exit(0)\n    except Exception:\n      pass\n    LOCKFILE.unlink(missing_ok=True)\n  LOCKFILE.write_text(str(os.getpid()))\n  try:\n    main()\n  finally:\n    LOCKFILE.unlink(missing_ok=True)\n\nConstraints:\n  - import os at the top of the file\n  - ASCII only, no Unicode\n  - Do not write any other files",
+      "acceptanceCriteria": [
+        "python3 -m py_compile businesses/horizen-zkverify/range-trader/scripts/run_range_pipeline.py",
+        "grep -q 'MAX_POSITIONS' businesses/horizen-zkverify/range-trader/scripts/run_range_pipeline.py",
+        "grep -q 'POSITION_SIZE_PCT' businesses/horizen-zkverify/range-trader/scripts/run_range_pipeline.py",
+        "grep -q 'range_pipeline.lock' businesses/horizen-zkverify/range-trader/scripts/run_range_pipeline.py",
+        "grep -q 'range_trade_log' businesses/horizen-zkverify/range-trader/scripts/run_range_pipeline.py"
+      ],
+      "qualityChecks": [
+        "python3 -m py_compile businesses/horizen-zkverify/range-trader/scripts/run_range_pipeline.py"
+      ],
+      "priority": 4,
+      "passes": true,
+      "attempts": 0,
+      "dependsOn": [
+        "US-001",
+        "US-002",
+        "US-003"
+      ],
+      "dependencyPolicy": "block",
+      "contextFiles": [
+        "businesses/horizen-zkverify/range-trader/scripts/range_scanner.py",
+        "businesses/horizen-zkverify/range-trader/scripts/support_resistance.py",
+        "businesses/horizen-zkverify/base-trader/scripts/run_pipeline.py"
+      ],
+      "_slug": "range-trader-build",
+      "notes": "Created run_range_pipeline.py as the main orchestrator for the range-trader pipeline. The file implements:\n- PID lockfile mechanism to prevent concurrent runs\n- Pipeline flow: scan \u2192 filter \u2192 execute "
+    },
+    {
+      "id": "US-005",
+      "title": "range_exit_monitor.py -- check open positions for stop/target exit on a 60-min schedule",
+      "description": "Current state: No exit monitor for range-trader. Base-trader has businesses/horizen-zkverify/base-trader/scripts/exit_monitor.py for reference.\n\nWhat to build: Create businesses/horizen-zkverify/range-trader/scripts/range_exit_monitor.py\n\nFile must begin with:\n  import sys, os\n  from pathlib import Path\n  sys.path.insert(0, str(Path(__file__).parent))\n\nLoad .env from Path.home() / '.openclaw' / '.env'\n\nImports:\n  from range_positions import load_positions, remove_position\n  from range_execute import sell_token\n  from range_scanner import get_price, get_ohlcv, _load_env as scanner_load_env\n  from support_resistance import calculate_sr, get_stop_loss\n  import requests\n\nTelegram notify function send_telegram(message: str):\n  - Uses TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID env vars\n  - TELEGRAM_CHAT_ID defaults to TELEGRAM_ALLOWED_USERS if TELEGRAM_CHAT_ID not set\n  - POST to https://api.telegram.org/bot{token}/sendMessage\n  - On error: print warning, do not raise\n\nFunction check_positions():\n  positions = load_positions()\n  if not positions:\n    print('[EXIT-MONITOR] No open positions')\n    return\n\n  for pos in positions:\n    symbol = pos['symbol']\n    address = pos['address']\n\n    # Get current price from screener, fallback to OHLCV last close\n    price = get_price(address)\n    if price == 0.0:\n      candles = get_ohlcv(symbol)\n      if candles:\n        price = candles[-1]['close']\n    if price == 0.0:\n      print(f'[EXIT-MONITOR] {symbol}: cannot get price, skipping')\n      continue\n\n    stop_loss = pos['stop_loss']\n    exit_price = pos['exit_price']\n    entry_price = pos['entry_price']\n    pnl_pct = (price - entry_price) / entry_price * 100\n\n    print(f'[EXIT-MONITOR] {symbol}: price=${price:.4f} entry=${entry_price:.4f} stop=${stop_loss:.4f} target=${exit_price:.4f} PnL={pnl_pct:.1f}%')\n\n    reason = None\n    if price <= stop_loss:\n      reason = 'stop'\n    elif price >= exit_price:\n      reason = 'target'\n\n    if reason:\n      print(f'[EXIT-MONITOR] {symbol}: EXIT signal ({reason})')\n      result = sell_token(address)\n      if result['status'] == 'ok':\n        remove_position(symbol)\n        msg = f'Range-Trader EXIT: {symbol} | reason={reason} | entry=${entry_price:.4f} | exit=${price:.4f} | PnL={pnl_pct:.1f}%'\n        send_telegram(msg)\n        print(f'[EXIT-MONITOR] {symbol}: sold OK, position removed')\n      else:\n        msg = f'Range-Trader EXIT FAILED: {symbol} | reason={reason} | error={result[\"error\"]}'\n        send_telegram(msg)\n        print(f'[EXIT-MONITOR] {symbol}: sell failed: {result[\"error\"]}')\n    else:\n      # Log proximity warnings\n      stop_pct = (price - stop_loss) / stop_loss * 100\n      target_pct = (exit_price - price) / exit_price * 100\n      if stop_pct < 3.0:\n        msg = f'Range-Trader WARNING: {symbol} is {stop_pct:.1f}% above stop loss (${stop_loss:.4f})'\n        send_telegram(msg)\n\nif __name__ == '__main__':\n  scanner_load_env()\n  check_positions()\n\nConstraints:\n  - ASCII only, no Unicode\n  - Do not write any other files",
+      "acceptanceCriteria": [
+        "python3 -m py_compile businesses/horizen-zkverify/range-trader/scripts/range_exit_monitor.py",
+        "grep -q 'stop_loss' businesses/horizen-zkverify/range-trader/scripts/range_exit_monitor.py",
+        "grep -q 'send_telegram' businesses/horizen-zkverify/range-trader/scripts/range_exit_monitor.py",
+        "grep -q 'TELEGRAM_BOT_TOKEN' businesses/horizen-zkverify/range-trader/scripts/range_exit_monitor.py"
+      ],
+      "qualityChecks": [
+        "python3 -m py_compile businesses/horizen-zkverify/range-trader/scripts/range_exit_monitor.py"
+      ],
+      "priority": 5,
+      "passes": true,
+      "attempts": 0,
+      "dependsOn": [
+        "US-003",
+        "US-002"
+      ],
+      "dependencyPolicy": "block",
+      "contextFiles": [
+        "businesses/horizen-zkverify/base-trader/scripts/exit_monitor.py",
+        "businesses/horizen-zkverify/range-trader/scripts/range_scanner.py",
+        "businesses/horizen-zkverify/range-trader/scripts/support_resistance.py"
+      ],
+      "_slug": "range-trader-build",
+      "notes": "Created range_exit_monitor.py implementing position exit monitoring. The script loads positions, checks each for stop_loss or target exit conditions using current price (from screener or OHLCV fallbac"
+    },
+    {
+      "id": "US-006",
+      "title": "range_reconcile.py -- on-chain position verification against positions file",
+      "description": "Current state: No reconcile for range-trader. Base-trader has businesses/horizen-zkverify/base-trader/scripts/reconcile.py for reference.\n\nWhat to build: Create businesses/horizen-zkverify/range-trader/scripts/range_reconcile.py\n\nFile must begin with:\n  import sys, os, json\n  from pathlib import Path\n  sys.path.insert(0, str(Path(__file__).parent))\n\nLoad .env from Path.home() / '.openclaw' / '.env'\n\nImports:\n  from web3 import Web3\n  from range_positions import load_positions, save_positions\n\nConstants:\n  BASE_RPC = 'https://mainnet.base.org'\n  USDC_ADDRESS = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'\n  USDC_DECIMALS = 6\n  ERC20_ABI: balanceOf(address)->uint256, decimals()->uint8\n\nFunction reconcile() -> dict:\n  w3 = Web3(Web3.HTTPProvider(BASE_RPC))\n  wallet = os.environ.get('METAMASK_WALLET_ADDRESS', '')\n  positions = load_positions()\n\n  usdc_contract = w3.eth.contract(address=Web3.to_checksum_address(USDC_ADDRESS), abi=ERC20_ABI)\n  usdc_bal = usdc_contract.functions.balanceOf(Web3.to_checksum_address(wallet)).call() / 10**USDC_DECIMALS\n  eth_bal = w3.eth.get_balance(Web3.to_checksum_address(wallet)) / 1e18\n\n  print(f'[RECONCILE] Wallet: {wallet}')\n  print(f'[RECONCILE] USDC: ${usdc_bal:.2f}')\n  print(f'[RECONCILE] ETH (gas): {eth_bal:.4f}')\n\n  updated_positions = []\n  for pos in positions:\n    symbol = pos['symbol']\n    address = pos['address']\n    tok = w3.eth.contract(address=Web3.to_checksum_address(address), abi=ERC20_ABI)\n    decimals = tok.functions.decimals().call()\n    raw_bal = tok.functions.balanceOf(Web3.to_checksum_address(wallet)).call()\n    actual_tokens = raw_bal / (10 ** decimals)\n    recorded_tokens = pos.get('tokens_held', 0)\n    discrepancy_pct = abs(actual_tokens - recorded_tokens) / max(recorded_tokens, 0.0001) * 100\n    print(f'[RECONCILE] {symbol}: on-chain={actual_tokens:.6f} recorded={recorded_tokens:.6f} discrepancy={discrepancy_pct:.1f}%')\n    if actual_tokens < 0.000001:\n      print(f'[RECONCILE] {symbol}: zero on-chain balance, removing from positions')\n      continue\n    pos['tokens_held'] = actual_tokens\n    updated_positions.append(pos)\n\n  save_positions(updated_positions)\n  print(f'[RECONCILE] Done. {len(updated_positions)} positions retained.')\n  return {'usdc': usdc_bal, 'eth': eth_bal, 'positions': len(updated_positions)}\n\nif __name__ == '__main__':\n  reconcile()\n\nConstraints:\n  - ASCII only, no Unicode\n  - Do not write any other files",
+      "acceptanceCriteria": [
+        "python3 -m py_compile businesses/horizen-zkverify/range-trader/scripts/range_reconcile.py",
+        "grep -q 'METAMASK_WALLET_ADDRESS' businesses/horizen-zkverify/range-trader/scripts/range_reconcile.py",
+        "grep -q 'USDC_ADDRESS' businesses/horizen-zkverify/range-trader/scripts/range_reconcile.py",
+        "python3 businesses/horizen-zkverify/range-trader/scripts/range_reconcile.py"
+      ],
+      "qualityChecks": [
+        "python3 -m py_compile businesses/horizen-zkverify/range-trader/scripts/range_reconcile.py"
+      ],
+      "priority": 6,
+      "passes": true,
+      "attempts": 0,
+      "dependsOn": [
+        "US-003"
+      ],
+      "dependencyPolicy": "block",
+      "contextFiles": [
+        "businesses/horizen-zkverify/base-trader/scripts/reconcile.py"
+      ],
+      "_slug": "range-trader-build",
+      "notes": "Created range_reconcile.py implementing on-chain position verification. The script loads positions from range_positions.py, checks USDC/ETH wallet balances, and verifies each token's on-chain balance "
+    },
+    {
+      "id": "US-007",
+      "title": "range_verifier.py -- post-run position sanity check with Telegram alert",
+      "description": "Current state: No verifier for range-trader. Base-trader has businesses/horizen-zkverify/base-trader/scripts/verifier.py for reference.\n\nWhat to build: Create businesses/horizen-zkverify/range-trader/scripts/range_verifier.py\n\nFile must begin with:\n  import sys, os, json\n  from pathlib import Path\n  sys.path.insert(0, str(Path(__file__).parent))\n\nLoad .env from Path.home() / '.openclaw' / '.env'\n\nImports:\n  from web3 import Web3\n  from range_positions import load_positions\n  from range_scanner import get_price, _load_env as scanner_load_env\n\nConstants:\n  BASE_RPC = 'https://mainnet.base.org'\n  DISCREPANCY_THRESHOLD = 0.05  # 5%\n  STOP_PROXIMITY_THRESHOLD = 0.05  # 5% above stop = alert\n  VERIFIER_LOG = Path(__file__).parent.parent / 'data' / 'range_verifier_log.jsonl'\n\nTelegram send_telegram(message: str): same pattern as range_exit_monitor.py\n\nFunction verify() -> bool:\n  Returns True if all checks pass, False if any fail.\n\n  w3 = Web3(Web3.HTTPProvider(BASE_RPC))\n  wallet = os.environ.get('METAMASK_WALLET_ADDRESS', '')\n  positions = load_positions()\n  ERC20_ABI: balanceOf, decimals\n  all_pass = True\n  log_entries = []\n\n  for pos in positions:\n    symbol = pos['symbol']\n    address = pos['address']\n    tok = w3.eth.contract(address=Web3.to_checksum_address(address), abi=ERC20_ABI)\n    decimals = tok.functions.decimals().call()\n    raw = tok.functions.balanceOf(Web3.to_checksum_address(wallet)).call()\n    on_chain = raw / (10 ** decimals)\n    recorded = pos.get('tokens_held', 0)\n    price = get_price(address)\n    entry_usdc = pos.get('entry_usdc', 0)\n    stop_loss = pos.get('stop_loss', 0)\n    entry_price = pos.get('entry_price', 0)\n\n    disc = abs(on_chain - recorded) / max(recorded, 0.0001)\n    stop_proximity = (price - stop_loss) / max(stop_loss, 0.0001) if stop_loss > 0 else 1.0\n    pnl_pct = (price - entry_price) / max(entry_price, 0.0001) * 100 if price > 0 else 0\n    current_usdc = on_chain * price if price > 0 else 0\n\n    status = 'pass'\n    alert = None\n    if disc > DISCREPANCY_THRESHOLD:\n      status = 'fail'\n      alert = f'DISCREPANCY: {symbol} on-chain={on_chain:.4f} recorded={recorded:.4f} ({disc*100:.1f}%)'\n      all_pass = False\n    elif stop_proximity < STOP_PROXIMITY_THRESHOLD:\n      status = 'warn'\n      alert = f'STOP PROXIMITY: {symbol} price=${price:.4f} stop=${stop_loss:.4f} ({stop_proximity*100:.1f}% above)'\n\n    entry = {'symbol': symbol, 'on_chain': on_chain, 'recorded': recorded,\n             'price': price, 'current_usdc': current_usdc, 'pnl_pct': pnl_pct,\n             'stop_proximity_pct': stop_proximity*100, 'status': status,\n             'ts': __import__('datetime').datetime.now(__import__('datetime').timezone.utc).isoformat()}\n    log_entries.append(entry)\n    print(f'[VERIFIER] {symbol}: {status} | on-chain={on_chain:.4f} | price=${price:.4f} | PnL={pnl_pct:.1f}%')\n\n    if alert:\n      send_telegram(f'Range-Trader Verifier: {alert}')\n      print(f'[VERIFIER] ALERT: {alert}')\n\n  VERIFIER_LOG.parent.mkdir(parents=True, exist_ok=True)\n  with open(VERIFIER_LOG, 'a') as f:\n    for entry in log_entries:\n      f.write(json.dumps(entry) + '\\n')\n\n  if not positions:\n    print('[VERIFIER] No positions to verify')\n  print(f'[VERIFIER] Result: {\"PASS\" if all_pass else \"FAIL\"}')\n  return all_pass\n\nif __name__ == '__main__':\n  scanner_load_env()\n  ok = verify()\n  sys.exit(0 if ok else 1)\n\nConstraints:\n  - ASCII only, no Unicode\n  - Do not write any other files",
+      "acceptanceCriteria": [
+        "python3 -m py_compile businesses/horizen-zkverify/range-trader/scripts/range_verifier.py",
+        "grep -q 'DISCREPANCY_THRESHOLD' businesses/horizen-zkverify/range-trader/scripts/range_verifier.py",
+        "grep -q 'send_telegram' businesses/horizen-zkverify/range-trader/scripts/range_verifier.py",
+        "python3 businesses/horizen-zkverify/range-trader/scripts/range_verifier.py"
+      ],
+      "qualityChecks": [
+        "python3 -m py_compile businesses/horizen-zkverify/range-trader/scripts/range_verifier.py"
+      ],
+      "priority": 7,
+      "passes": true,
+      "attempts": 0,
+      "dependsOn": [
+        "US-003"
+      ],
+      "dependencyPolicy": "block",
+      "contextFiles": [
+        "businesses/horizen-zkverify/base-trader/scripts/verifier.py",
+        "businesses/horizen-zkverify/range-trader/scripts/range_scanner.py"
+      ],
+      "_slug": "range-trader-build",
+      "notes": "Created range_verifier.py implementing post-run position sanity checks. The script verifies on-chain token balances against recorded positions, checks stop loss proximity, and sends Telegram alerts on"
+    },
+    {
+      "id": "US-008",
+      "title": "run-range-pipeline.sh + launchd plists for pipeline and exit-monitor",
+      "description": "Current state: No shell wrapper or launchd plists exist for range-trader. Base-trader uses businesses/horizen-zkverify/base-trader/run-exit-monitor.sh and /Users/jill/Library/LaunchAgents/com.crestview.base-trader.plist as reference.\n\nVenv location: businesses/horizen-zkverify/range-trader/venv/\nNote: venv already exists (created during development). Do not recreate it.\n\nWhat to build: 3 files\n\n--- FILE 1: businesses/horizen-zkverify/range-trader/run-range-pipeline.sh ---\n#!/bin/bash\nset -e\ncd /Users/jill/.openclaw/workspace\nsource businesses/horizen-zkverify/range-trader/venv/bin/activate\nsource ~/.openclaw/.env\npython3 businesses/horizen-zkverify/range-trader/scripts/run_range_pipeline.py\n\n--- FILE 2: businesses/horizen-zkverify/range-trader/run-range-exit-monitor.sh ---\n#!/bin/bash\nset -e\ncd /Users/jill/.openclaw/workspace\nsource businesses/horizen-zkverify/range-trader/venv/bin/activate\nsource ~/.openclaw/.env\npython3 businesses/horizen-zkverify/range-trader/scripts/range_exit_monitor.py\n\n--- FILE 3: /Users/jill/Library/LaunchAgents/com.crestview.range-trader.plist ---\nXML plist with:\n  Label: com.crestview.range-trader\n  ProgramArguments: [/bin/bash, /Users/jill/.openclaw/workspace/businesses/horizen-zkverify/range-trader/run-range-pipeline.sh]\n  StartInterval: 1800\n  RunAtLoad: false\n  StandardOutPath: /Users/jill/.openclaw/workspace/businesses/horizen-zkverify/range-trader/data/range-trader.log\n  StandardErrorPath: /Users/jill/.openclaw/workspace/businesses/horizen-zkverify/range-trader/data/range-trader-err.log\n  EnvironmentVariables dict with PATH: /opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin\n\n--- FILE 4: /Users/jill/Library/LaunchAgents/com.crestview.range-exit-monitor.plist ---\nXML plist with:\n  Label: com.crestview.range-exit-monitor\n  ProgramArguments: [/bin/bash, /Users/jill/.openclaw/workspace/businesses/horizen-zkverify/range-trader/run-range-exit-monitor.sh]\n  StartInterval: 3600\n  RunAtLoad: false\n  StandardOutPath: /Users/jill/.openclaw/workspace/businesses/horizen-zkverify/range-trader/data/range-exit-monitor.log\n  StandardErrorPath: /Users/jill/.openclaw/workspace/businesses/horizen-zkverify/range-trader/data/range-exit-monitor-err.log\n  EnvironmentVariables dict with PATH: /opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin\n\nIMPORTANT: StandardOutPath and StandardErrorPath must be absolute paths (not relative). Relative paths cause exit code 78.\n\nConstraints:\n  - chmod +x on both .sh files\n  - ASCII only, no Unicode\n  - Do not load the plists (launchctl load) -- that is done manually after verification",
+      "acceptanceCriteria": [
+        "test -x businesses/horizen-zkverify/range-trader/run-range-pipeline.sh",
+        "test -x businesses/horizen-zkverify/range-trader/run-range-exit-monitor.sh",
+        "test -f /Users/jill/Library/LaunchAgents/com.crestview.range-trader.plist",
+        "test -f /Users/jill/Library/LaunchAgents/com.crestview.range-exit-monitor.plist",
+        "grep -q 'StartInterval' /Users/jill/Library/LaunchAgents/com.crestview.range-trader.plist",
+        "grep -q '/Users/jill/.openclaw/workspace/businesses/horizen-zkverify/range-trader/data/range-trader.log' /Users/jill/Library/LaunchAgents/com.crestview.range-trader.plist"
+      ],
+      "qualityChecks": [
+        "test -x businesses/horizen-zkverify/range-trader/run-range-pipeline.sh"
+      ],
+      "priority": 8,
+      "passes": true,
+      "attempts": 0,
+      "dependsOn": [
+        "US-004",
+        "US-005"
+      ],
+      "dependencyPolicy": "block",
+      "contextFiles": [
+        "businesses/horizen-zkverify/base-trader/run-exit-monitor.sh"
+      ],
+      "_slug": "range-trader-build",
+      "notes": "Implemented US-008: Created 4 files for automated range-trader execution. Two shell scripts (run-range-pipeline.sh and run-range-exit-monitor.sh) set up the venv and environment, then invoke the Pytho"
+    }
+  ]
+}

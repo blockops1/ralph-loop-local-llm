@@ -1,0 +1,11 @@
+# Ralph Progress Log - rt-critical-fixes
+Started: 2026-03-17T18:59:47.871682
+---
+
+## [2026-03-17 19:03]
+✅ US-001: Fix Slipstream amountOutMinimum=0 in range_execute.py — add slippage protection
+Fixed Slipstream amountOutMinimum=0 vulnerability in range_execute.py by implementing price-based slippage protection. Added helper functions _get_token_price() and _get_weth_price() to fetch prices from GeckoTerminal API, and modified _slipstream_buy() and _slipstream_sell() to calculate amountOutM
+
+## [2026-03-17 19:08]
+✅ US-002: Fix Slipstream position sizing to use amount_usdc parameter instead of 25% of WETH
+Fixed Slipstream position sizing in buy_token() to use amount_usdc parameter instead of hardcoded 25% of WETH balance. Changes: 1) Added ETH price lookup via _get_weth_price() with $1800 fallback on failure, 2) Convert USDC to WETH: weth_needed = amount_usdc / eth_price_usd, then to wei: amount_in_w

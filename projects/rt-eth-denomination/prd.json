@@ -1,0 +1,150 @@
+{
+  "branch": "dev",
+  "branchNote": "ALL file changes must be made on the dev branch. Do NOT merge to main. Run: git checkout dev before any write_file calls. Verify with: git branch --show-current",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Scanner: fetch OHLCV and price in ETH (token-native denomination)",
+      "description": "PRE-CONDITION: Run 'git checkout dev' before making any changes. Verify with 'git branch --show-current' -- must show 'dev'. All work stays on dev branch.\n\nCurrent state: range_scanner.py exists at businesses/horizen-zkverify/range-trader/scripts/range_scanner.py. It fetches OHLCV candles with currency='usd' (line 179) and prices via DexScreener priceUsd / GeckoTerminal price_usd (lines 274, 289, 305). The scan_all() result dict has key 'price_usd'.\n\nWhat to build: Change the scanner to use ETH denomination throughout.\n\n1. In _fetch_gt_ohlcv(): change params={'limit': OHLCV_DAYS, 'currency': 'token'} so GeckoTerminal returns candles in the pool quote token (WETH). Note: for TOKEN/WETH pools, currency='token' returns price in WETH.\n\n2. Add a new function get_price_eth(token_address: str) -> float that fetches the token price in ETH. Use DexScreener primary: GET https://api.dexscreener.com/latest/dex/tokens/{address}, filter pairs where chainId=='base', pick highest liquidity, return float(best['priceNative']). Fallback: GeckoTerminal token info endpoint, return float(attrs.get('price_usd', 0)) / eth_price_usd where eth_price_usd comes from a DexScreener lookup of WETH (0x4200000000000000000000000000000000000006).\n\n3. In scan_all(): call get_price_eth(address) and store as result['price_eth'] in addition to (or replacing) result['price_usd']. The S/R calc uses candles so it will now produce support/resistance in ETH automatically. Also update the __main__ print to show price_eth.\n\nConstraints:\n- Keep get_price() (USD) intact -- range_daily_summary.py uses it for wallet valuation\n- Add sys.path.insert(0, str(Path(__file__).parent)) if not already present\n- The OHLCV cache key must change to avoid serving stale USD candles -- append '_eth' to cache keys or clear the cache file on first run by checking currency marker\n- Do not modify support_resistance.py",
+      "acceptanceCriteria": [
+        "python3 -m py_compile businesses/horizen-zkverify/range-trader/scripts/range_scanner.py",
+        "grep -n \"currency.*token\" businesses/horizen-zkverify/range-trader/scripts/range_scanner.py",
+        "grep -n \"price_eth\" businesses/horizen-zkverify/range-trader/scripts/range_scanner.py",
+        "grep -n \"priceNative\" businesses/horizen-zkverify/range-trader/scripts/range_scanner.py"
+      ],
+      "qualityChecks": "python3 -m py_compile businesses/horizen-zkverify/range-trader/scripts/range_scanner.py",
+      "priority": 1,
+      "passes": true,
+      "attempts": 0,
+      "dependsOn": [],
+      "dependencyPolicy": "block",
+      "contextFiles": [
+        "businesses/horizen-zkverify/range-trader/scripts/range_scanner.py"
+      ],
+      "_slug": "rt-eth-denomination",
+      "notes": "Implemented US-001: Scanner now fetches OHLCV and price in ETH denomination.\n\nChanges made:\n1. Changed `_fetch_gt_ohlcv()` to use `currency='token'` so GeckoTerminal returns candles in WETH for TOKEN/"
+    },
+    {
+      "id": "US-002",
+      "title": "Pipeline: size positions in ETH from wallet ETH balance",
+      "description": "Current state: run_range_pipeline.py exists at businesses/horizen-zkverify/range-trader/scripts/run_range_pipeline.py. It sizes positions as POSITION_SIZE_PCT (25%) of USDC balance (lines 18-19, 171-176). buy_token() in range_execute.py is called with amount_usdc.\n\nWhat to build: Change position sizing to use ETH balance instead of USDC.\n\n1. Add constant MIN_ETH_TRADE = 0.003 (replace MIN_USDC_TRADE = 10.0)\n2. Add constant POSITION_SIZE_PCT = 0.25 (keep same value)\n3. Replace get_usdc_balance() call with get_eth_balance(w3, wallet_address) -> float. Use w3.eth.get_balance() / 1e18. Keep 0.005 ETH reserved for gas: tradeable_eth = eth_balance - 0.005.\n4. Compute amount_eth = tradeable_eth * POSITION_SIZE_PCT\n5. Replace the MIN_USDC_TRADE check with: if amount_eth < MIN_ETH_TRADE: skip\n6. Call buy_token(sig['address'], amount_eth) -- buy_token signature changes in US-003 but for now pass amount_eth as the second argument\n7. In the position record written to positions.json, rename 'entry_usdc' to 'entry_eth' and store amount_eth\n8. Update log messages: replace '$X USDC' with 'X ETH'\n\nConstraints:\n- Do not remove USDC_ADDRESS or USDC constants -- range_verifier.py may use them\n- Keep the POSITION_SIZE_PCT name the same\n- Add sys.path.insert(0, str(Path(__file__).parent)) if not already present",
+      "acceptanceCriteria": [
+        "python3 -m py_compile businesses/horizen-zkverify/range-trader/scripts/run_range_pipeline.py",
+        "grep -n \"MIN_ETH_TRADE\" businesses/horizen-zkverify/range-trader/scripts/run_range_pipeline.py",
+        "grep -n \"entry_eth\" businesses/horizen-zkverify/range-trader/scripts/run_range_pipeline.py",
+        "grep -n \"get_eth_balance\\|eth_balance\" businesses/horizen-zkverify/range-trader/scripts/run_range_pipeline.py"
+      ],
+      "qualityChecks": "python3 -m py_compile businesses/horizen-zkverify/range-trader/scripts/run_range_pipeline.py",
+      "priority": 2,
+      "passes": true,
+      "attempts": 0,
+      "dependsOn": [
+        "US-001"
+      ],
+      "dependencyPolicy": "block",
+      "contextFiles": [
+        "businesses/horizen-zkverify/range-trader/scripts/run_range_pipeline.py",
+        "businesses/horizen-zkverify/range-trader/scripts/range_execute.py"
+      ],
+      "_slug": "rt-eth-denomination",
+      "notes": "Implemented US-002: Changed position sizing from USDC to ETH balance.\n\nChanges made:\n1. Replaced `MIN_USDC_TRADE = 10.0` with `MIN_ETH_TRADE = 0.003`\n2. Kept `POSITION_SIZE_PCT = 0.25` (25% of tradeab"
+    },
+    {
+      "id": "US-003",
+      "title": "Execute: buy_token() accepts amount_eth directly (no USD->ETH conversion)",
+      "description": "Current state: range_execute.py exists at businesses/horizen-zkverify/range-trader/scripts/range_execute.py. buy_token(token_address, amount_usdc, slippage) converts amount_usdc to WETH using _get_weth_price() (lines 437-445). The Slipstream path (all Base tokens) already uses WETH for the actual swap -- the USD->ETH conversion is just overhead and introduces price risk.\n\nWhat to build: Rename the parameter and remove the USD->ETH conversion.\n\n1. Change buy_token signature to: buy_token(token_address: str, amount_eth: float, slippage: float = SLIPPAGE_DEFAULT)\n2. In the Slipstream branch: set weth_needed = amount_eth directly (remove the eth_price_usd lookup and division)\n3. Update the log line to: print(f'[EXECUTE] Slipstream BUY: {amount_eth:.6f} WETH')\n4. Update result dict: replace 'amount_usdc': amount_usdc with 'amount_eth': amount_eth\n5. For the classic Aerodrome USDC branch (non-Slipstream): this path is effectively dead for current token list but keep it -- just log a warning if called: print('[EXECUTE] WARNING: classic USDC path called -- not ETH denominated')\n6. Keep _get_weth_price() intact -- used by exit monitor and daily summary\n\nConstraints:\n- Do not change sell_token() signature or behavior\n- Do not change _get_weth_price()\n- Add sys.path.insert(0, str(Path(__file__).parent)) if not already present",
+      "acceptanceCriteria": [
+        "python3 -m py_compile businesses/horizen-zkverify/range-trader/scripts/range_execute.py",
+        "grep -n \"def buy_token.*amount_eth\" businesses/horizen-zkverify/range-trader/scripts/range_execute.py",
+        "grep -n \"weth_needed = amount_eth\" businesses/horizen-zkverify/range-trader/scripts/range_execute.py"
+      ],
+      "qualityChecks": "python3 -m py_compile businesses/horizen-zkverify/range-trader/scripts/range_execute.py",
+      "priority": 3,
+      "passes": true,
+      "attempts": 0,
+      "dependsOn": [
+        "US-002"
+      ],
+      "dependencyPolicy": "block",
+      "contextFiles": [
+        "businesses/horizen-zkverify/range-trader/scripts/range_execute.py"
+      ],
+      "_slug": "rt-eth-denomination",
+      "notes": "Implemented US-003: Changed buy_token() signature from amount_usdc to amount_eth, removed USD->ETH conversion in Slipstream path (now uses weth_needed = amount_eth directly), updated log to print WETH"
+    },
+    {
+      "id": "US-004",
+      "title": "Exit monitor: fetch price in ETH and compare to ETH-denominated stop/target",
+      "description": "Current state: range_exit_monitor.py exists at businesses/horizen-zkverify/range-trader/scripts/range_exit_monitor.py. It calls get_price(address) from range_scanner (returns USD, line 57) and compares to stop_loss and exit_price (which will now be ETH-denominated from S/R calculated on ETH candles).\n\nWhat to build: Switch price fetch to ETH denomination.\n\n1. Import get_price_eth from range_scanner (added in US-001): from range_scanner import get_price_eth, get_ohlcv, _load_env as scanner_load_env\n2. Replace: price = get_price(address) with: price = get_price_eth(address)\n3. Update log line (line 71) to use 'xi' symbol instead of '$': print(f'[EXIT-MONITOR] {symbol}: price=xi{price:.6f} entry=xi{entry_price:.6f} stop=xi{stop_loss:.6f} target=xi{exit_price:.6f} PnL={pnl_pct:.1f}%') -- use the word 'E:' as prefix if xi causes encoding issues\n4. Update warning message (line 174) similarly: replace '$' with 'E:'\n5. Everything else (stop_loss comparison, exit_price comparison, PnL calc) remains unchanged -- the math is denomination-agnostic\n\nConstraints:\n- Do not change sell_token() calls\n- Do not change position record structure written to positions.json\n- Keep get_price import for any other callers in the file",
+      "acceptanceCriteria": [
+        "python3 -m py_compile businesses/horizen-zkverify/range-trader/scripts/range_exit_monitor.py",
+        "grep -n \"get_price_eth\" businesses/horizen-zkverify/range-trader/scripts/range_exit_monitor.py"
+      ],
+      "qualityChecks": "python3 -m py_compile businesses/horizen-zkverify/range-trader/scripts/range_exit_monitor.py",
+      "priority": 4,
+      "passes": true,
+      "attempts": 0,
+      "dependsOn": [
+        "US-001"
+      ],
+      "dependencyPolicy": "block",
+      "contextFiles": [
+        "businesses/horizen-zkverify/range-trader/scripts/range_exit_monitor.py",
+        "businesses/horizen-zkverify/range-trader/scripts/range_scanner.py"
+      ],
+      "_slug": "rt-eth-denomination",
+      "notes": "Implemented US-004: Switched range_exit_monitor.py to use ETH-denominated prices. Changes: (1) Imported get_price_eth from range_scanner; (2) Replaced get_price() call with get_price_eth() for current"
+    },
+    {
+      "id": "US-005",
+      "title": "Daily report: display ETH prices and S/R in token range table",
+      "description": "Current state: range_daily_summary.py exists at businesses/horizen-zkverify/range-trader/scripts/range_daily_summary.py. The Token Ranges section (added recently) reads sr.get('support'), sr.get('resistance'), r.get('price_usd') and formats with '$' prefix.\n\nWhat to build: Update the Token Ranges section to use ETH denomination.\n\n1. When reading scan results in the Token Ranges loop:\n   - Replace: price = r.get('price_usd') or sr.get('current_price')\n   - With: price = r.get('price_eth') or sr.get('current_price')\n2. Update price/support/resistance formatting: replace f'${val:.4f}' with f'E:{val:.6f}' (use 6 decimal places for ETH -- most tokens are small fractions of an ETH)\n3. Update column header from 'Price' to 'Price (ETH)' and 'Support'/'Resistance' to 'Support (ETH)'/'Resist (ETH)'\n4. The Open Positions section uses get_current_price_gt() (which returns USD) for P&L -- leave it as USD since cost basis in positions.json may still mix ETH/USD during transition. Add a note in the table header: 'P&L (USD approx)'\n5. Keep all wallet balance sections in USD (eth_bal * eth_price, usdc_bal)\n\nConstraints:\n- Do not change CSS\n- Do not change Wallet or Trades sections\n- Do not change the Open Positions P&L calculation",
+      "acceptanceCriteria": [
+        "python3 -m py_compile businesses/horizen-zkverify/range-trader/scripts/range_daily_summary.py",
+        "grep -n \"price_eth\" businesses/horizen-zkverify/range-trader/scripts/range_daily_summary.py",
+        "grep -n \"ETH\" businesses/horizen-zkverify/range-trader/scripts/range_daily_summary.py"
+      ],
+      "qualityChecks": "python3 -m py_compile businesses/horizen-zkverify/range-trader/scripts/range_daily_summary.py",
+      "priority": 5,
+      "passes": true,
+      "attempts": 0,
+      "dependsOn": [
+        "US-001"
+      ],
+      "dependencyPolicy": "block",
+      "contextFiles": [
+        "businesses/horizen-zkverify/range-trader/scripts/range_daily_summary.py",
+        "businesses/horizen-zkverify/range-trader/scripts/range_scanner.py"
+      ],
+      "_slug": "rt-eth-denomination",
+      "notes": "Updated Token Ranges section to display ETH prices:\n- Changed price source from `price_usd` to `price_eth`\n- Updated formatting from `$` prefix to `E:` prefix with 6 decimal places\n- Updated column he"
+    },
+    {
+      "id": "US-006",
+      "title": "Clear OHLCV cache and validate end-to-end scan produces ETH prices",
+      "description": "Current state: The OHLCV disk cache at businesses/horizen-zkverify/range-trader/data/gt_ohlcv_cache.json contains USD candles. After US-001 changes currency to 'token', the cache must be cleared so fresh ETH candles are fetched.\n\nWhat to build: Write a one-time migration script and validate the full scan.\n\n1. Create businesses/horizen-zkverify/range-trader/scripts/clear_ohlcv_cache.py:\n   - Reads gt_ohlcv_cache.json, writes {} to it, prints 'Cache cleared'\n   - Also reads gt_price_cache.json if it exists, writes {} to it\n   - Main guard: if __name__ == '__main__': clear both caches\n\n2. The acceptance criteria will run the scanner in dry-run mode to confirm ETH prices come back correctly. The script must exit 0 and print at least one line containing 'price_eth' or 'E:' for ZEN.\n\nConstraints:\n- Do not modify any trading scripts in this story\n- Do not delete the cache files -- write {} to them (empty dict)\n- Script must be self-contained with sys.path.insert",
+      "acceptanceCriteria": [
+        "python3 -m py_compile businesses/horizen-zkverify/range-trader/scripts/clear_ohlcv_cache.py",
+        "cd businesses/horizen-zkverify/range-trader && python3 scripts/clear_ohlcv_cache.py",
+        "python3 -m py_compile businesses/horizen-zkverify/range-trader/scripts/range_scanner.py"
+      ],
+      "qualityChecks": "python3 -m py_compile businesses/horizen-zkverify/range-trader/scripts/clear_ohlcv_cache.py",
+      "priority": 6,
+      "passes": true,
+      "attempts": 0,
+      "dependsOn": [
+        "US-001",
+        "US-002",
+        "US-003",
+        "US-004",
+        "US-005"
+      ],
+      "dependencyPolicy": "block",
+      "contextFiles": [
+        "businesses/horizen-zkverify/range-trader/scripts/range_scanner.py"
+      ],
+      "_slug": "rt-eth-denomination",
+      "notes": "Created clear_ohlcv_cache.py script that reads gt_ohlcv_cache.json and gt_price_cache.json, writes {} to them, and prints 'Cache cleared'. All acceptance criteria pass: py_compile succeeds for both sc"
+    }
+  ]
+}

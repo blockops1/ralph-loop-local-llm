@@ -1,0 +1,39 @@
+# Ralph Progress Log - solana-trader-core
+Started: 2026-03-18T08:13:26.359074
+---
+
+## [2026-03-18 08:14]
+✅ ST-001: Create directory structure and config.yaml
+Created the Solana trader directory structure (config/, data/, scripts/) and config.yaml with all specified settings. Both acceptance criteria pass: file exists and YAML loads correctly with max_positions=6 and stop_loss_pct=0.20.
+
+## [2026-03-18 08:15]
+✅ ST-002: Create scanner.py — reads shared Nansen cache, fetches SOL price, flow intelligence
+Created scanner.py with four functions: get_sol_price_usd() (fetches SOL price from DexScreener, fallback 130.0), get_btc_4h_change() (BTC 4h change from CoinGecko), load_candidate_tokens() (loads Solana tokens from shared Nansen cache with quality filters), and get_flow_intelligence() (fetches flow
+
+## [2026-03-18 08:16]
+✅ ST-003: Create signal_filter.py — SM scoring with flow intelligence layer
+Created signal_filter.py with score_signal() function implementing 4-pillar scoring (SM Netflow, Flow Intelligence, Volume, Token Health) totaling 400 points. Includes hard disqualifiers for BTC kill switch, zero smart trader wallets, and negative netflow. All acceptance criteria pass: syntax compil
+
+## [2026-03-18 08:17]
+✅ ST-004: Create decision.py and positions.py
+Created positions.py and decision.py files in the solana-trader/scripts directory. positions.py provides functions to load, save, add, remove, and get positions from positions.json. decision.py provides blacklist management, cooldown tracking, and decision formatting with tier1_target and tier2_targ
+
+## [2026-03-18 08:19]
+✅ ST-005: Create execute.py — Jupiter Ultra API buy/sell with paper-trade flag
+Created execute.py with buy_token and sell_token functions that use pyjupiter Ultra API for real execution, with PAPER_TRADE environment variable to bypass real trades. Both functions handle balance queries via Helius RPC and return result dicts with success/paper status.
+
+## [2026-03-18 08:20]
+✅ ST-006: Create exit_monitor.py — tiered exits and trailing stop
+Created exit_monitor.py with tiered exit logic: Tier 1 (+50% PnL) sells 50% and moves stop to breakeven; Tier 2 (+100% PnL) sells remaining 50% (25% of original); trailing stop (30% from peak) closes remaining position after Tier 2; hard stop loss at -20%; breakeven stop after Tier 1 hit. Uses DexSc
+
+## [2026-03-18 08:21]
+✅ ST-007: Create run_pipeline.py — orchestrator with paper-trade, credit tracking, Telegram alerts
+Created run_pipeline.py orchestrator that: loads config and .env, runs exit monitor first, checks BTC kill switch, loads candidates from Nansen cache, scores signals with flow intelligence, checks blacklist/cooldown/max positions, executes paper/real buys, logs to signal_log.jsonl and run_log.jsonl,
+
+## [2026-03-18 08:22]
+✅ ST-008: Create verifier.py and reconcile.py
+Created two new scripts: verifier.py (verifies on-chain balances match positions.json, corrects discrepancies >5%) and reconcile.py (finds positions with near-zero on-chain balance and marks them closed_missing with cooldown). Both files compile successfully.
+
+## [2026-03-18 08:24]
+✅ ST-009: Smoke test — run pipeline in paper mode and verify outputs
+Fixed missing `import yaml` in run_pipeline.py that caused NameError. Pipeline now runs successfully in paper mode, producing signal_log.jsonl and run_log.jsonl as expected.

@@ -1,0 +1,75 @@
+{
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Extract wind data from TFRRS athlete profile pages in tfrrs_crossref.py pull_marks()",
+      "description": "Current state: tfrrs_crossref.py at businesses/data-services/tf-predictor/scripts/tfrrs_crossref.py has a pull_marks() function that scrapes TFRRS athlete profile pages. It extracts mark_metric and mark_raw from table cells, but does NOT extract wind data.\n\nTFRRS HTML structure for outdoor field events shows wind in a span tag immediately after the mark link:\n\n  <a href=\"...\">12.26m</a>\n  <span style=\"font-style:italic;font-size:14px\">\n    (+0.0)\n  </span>\n\nWind format is always (+N.N) or (-N.N) or (+0.0) inside parentheses. Indoor marks do not have wind spans.\n\nThe pull_marks() function currently builds an entry dict:\n  entry = {\"mark_metric\": mark_val, \"mark_raw\": mark_raw, \"placement\": place_raw, \"meet_name\": meet_name, \"date\": date_raw, \"tfrrs_id\": tfrrs_id}\n\nIt then passes these to db.upsert_performances() which calls _parse_wind(mark_raw) -- but mark_raw is just '12.26m40\\' 2.75\"' with no wind embedded.\n\nWhat to build:\n1. In pull_marks(), after extracting mark_val from the table cell, look for a wind span. The wind is in a <span> sibling element within the same <td> cell. Use BeautifulSoup to find it:\n   - Get the first <td> cell that contains the mark link\n   - Find all <span> tags within that cell\n   - Look for a span whose text matches the pattern r'\\([+-]?\\d+\\.\\d+\\)' (wind in parens)\n   - Extract the float value from inside the parens\n   - If no wind span found, wind_val = None\n\n2. Add 'wind' key to the entry dict: entry['wind'] = wind_val\n   This key is already handled by db.upsert_performances() -- it looks for rec.get('mark_raw') to call _parse_wind(), but we should also pass wind directly.\n\n3. Modify the entry dict to include the wind value so it gets stored in the JSON file AND passed to the DB.\n\nThe current code structure in pull_marks() iterates table rows:\n  for row in table.find_all('tr'):\n      cells = row.find_all('td')\n      if len(cells) < 2: continue\n      event_raw = cells[0].get_text(strip=True)\n      mark_raw = cells[1].get_text(strip=True) if len(cells) > 1 else ''\n\nThe problem is cells[0] contains the event name, cells[1] contains the mark+wind+imperial all mashed together via get_text(). Instead, we need to parse cells[0] more carefully because the TFRRS profile layout puts the mark in the FIRST cell (not cells[1]).\n\nActually, looking at the HTML more carefully: each <tr> in the TFRRS profile has 3 <td> cells:\n  - cells[0]: mark (with link) + wind span + imperial + school transfer note\n  - cells[1]: meet name (with link)\n  - cells[2]: date\n\nSo event_raw actually comes from the <thead> row (the table header), not from individual rows. The current code incorrectly reads cells[0] as event_raw -- it actually reads the mark cell's text which happens to include the metric number.\n\nFIX: The wind extraction should look at the cell that contains the mark link (<a> with href matching /results/). Find that cell, then find the <span> within it that contains the wind pattern.\n\nImplementation:\n  mark_cell = cells[0]  # first td in the row\n  wind_val = None\n  for span in mark_cell.find_all('span'):\n      span_text = span.get_text(strip=True)\n      wind_match = re.search(r'\\(([+-]?\\d+\\.\\d+)\\)', span_text)\n      if wind_match:\n          wind_val = float(wind_match.group(1))\n          break\n\n  entry['wind'] = wind_val\n\nConstraints:\n- Do NOT modify predict_event.py, generate_report.py, or score_meet.py\n- Do NOT change the existing mark_metric or mark_raw extraction logic -- only ADD wind extraction\n- The change must be safe when wind spans are absent (indoor marks) -- wind_val stays None\n- Keep all existing delay/rate-limiting behavior unchanged",
+      "acceptanceCriteria": [
+        "python3 -m py_compile businesses/data-services/tf-predictor/scripts/tfrrs_crossref.py",
+        "grep -c 'wind' businesses/data-services/tf-predictor/scripts/tfrrs_crossref.py | python3 -c \"import sys; n=int(sys.stdin.read().strip()); assert n >= 3, f'only {n} wind references found'; print(f'{n} wind references PASS')\""
+      ],
+      "qualityChecks": [
+        "python3 -m py_compile businesses/data-services/tf-predictor/scripts/tfrrs_crossref.py"
+      ],
+      "priority": 1,
+      "passes": true,
+      "attempts": 0,
+      "dependsOn": [],
+      "dependencyPolicy": "block",
+      "contextFiles": [
+        "businesses/data-services/tf-predictor/scripts/tfrrs_crossref.py"
+      ],
+      "_slug": "tf-model-wind",
+      "notes": "Implemented wind data extraction in tfrrs_crossref.py pull_marks() function. Added logic to parse TFRRS athlete profile pages and extract wind values from <span> elements within table cells. Wind form"
+    },
+    {
+      "id": "US-002",
+      "title": "Update db.py upsert_performances() to accept explicit wind value from scraper",
+      "description": "Current state: db.py at businesses/data-services/tf-predictor/scripts/db.py has upsert_performances() which stores wind by calling _parse_wind(rec.get('mark_raw', '')). This extracts wind from the mark_raw string. However, the TFRRS scraper now passes wind as a separate 'wind' key in the record dict (from US-001).\n\nThe current code:\n  wind = _parse_wind(rec.get('mark_raw', ''))\n\nWhat to change:\n1. In upsert_performances(), prefer the explicit 'wind' key from the record if present, fall back to _parse_wind(mark_raw) if not:\n   wind = rec.get('wind')  # explicit from scraper\n   if wind is None:\n       wind = _parse_wind(rec.get('mark_raw', ''))  # fallback: parse from string\n\nThis is a 2-line change. The explicit value from the scraper is more reliable because it was parsed from the HTML structure, not a text string.\n\nConstraints:\n- Do NOT change the function signature\n- Do NOT modify any other function in db.py\n- The change must be backward-compatible: old records without 'wind' key still work via _parse_wind fallback",
+      "acceptanceCriteria": [
+        "python3 -m py_compile businesses/data-services/tf-predictor/scripts/db.py",
+        "grep -q \"rec.get('wind')\" businesses/data-services/tf-predictor/scripts/db.py"
+      ],
+      "qualityChecks": [
+        "python3 -m py_compile businesses/data-services/tf-predictor/scripts/db.py"
+      ],
+      "priority": 2,
+      "passes": true,
+      "attempts": 0,
+      "dependsOn": [
+        "US-001"
+      ],
+      "dependencyPolicy": "block",
+      "contextFiles": [
+        "businesses/data-services/tf-predictor/scripts/db.py"
+      ],
+      "_slug": "tf-model-wind",
+      "notes": "Implemented US-002: Modified `upsert_performances()` in db.py to prefer explicit 'wind' key from scraper records, with fallback to `_parse_wind(rec.get('mark_raw', ''))` for backward compatibility. Th"
+    },
+    {
+      "id": "US-003",
+      "title": "Add wind correction constants and normalize_wind_mark() to predict_event.py",
+      "description": "Current state: predict_event.py at businesses/data-services/tf-predictor/scripts/predict_event.py has a load_marks() function that loads performance marks from SQLite. The DB now stores wind values (from US-001/US-002). The marks dict from load_marks() includes 'wind_ms' from the DB row.\n\nWhat to build:\n1. Add wind correction constants at module level after the existing YEAR_PROGRESSION dict:\n   WIND_CORRECTION_FACTOR = {'triple-jump': 0.15, 'long-jump': 0.10}\n   These are meters of correction per 1.0 m/s of wind (IAAF approximation).\n   Positive wind = tailwind = mark is inflated. Negative = headwind = mark is suppressed.\n\n2. Add a new function normalize_wind_mark(mark_metric, wind_ms, event_slug) that:\n   - Returns mark_metric unchanged if wind_ms is None or event_slug not in WIND_CORRECTION_FACTOR\n   - Otherwise returns: mark_metric - (wind_ms * WIND_CORRECTION_FACTOR[event_slug])\n   - Example: 13.00m TJ with +2.0 wind -> 13.00 - (2.0 * 0.15) = 12.70m (zero-wind equivalent)\n   - Example: 13.00m TJ with -1.0 wind -> 13.00 - (-1.0 * 0.15) = 13.15m\n\n3. In load_marks(), after constructing each mark dict, add a 'mark_wind_corrected' key:\n   mark_wind_corrected = normalize_wind_mark(mark_val, wind_val, event_slug)\n   where wind_val = r.get('wind') from the DB row and event_slug is passed to load_marks.\n   Note: load_marks() currently receives event_slug as a parameter.\n\n4. In project_mark(), use mark_wind_corrected instead of mark_metric for:\n   - all_vals computation (for best_mark and trajectory)\n   - The returned predicted_mark is in zero-wind-equivalent meters\n   Update the method string to include 'wind_corrected' when any marks had non-None wind values.\n\nConstraints:\n- Do NOT modify db.py, generate_report.py, or score_meet.py\n- Do NOT change the function signature of project_mark()\n- The correction must be safe when all wind values are None (no crashes, no changes to output)\n- numpy is already imported in the file",
+      "acceptanceCriteria": [
+        "python3 -m py_compile businesses/data-services/tf-predictor/scripts/predict_event.py",
+        "python3 -c \"import sys; sys.path.insert(0,'businesses/data-services/tf-predictor/scripts'); from predict_event import normalize_wind_mark; assert normalize_wind_mark(13.0, 2.0, 'triple-jump') == 12.7, f'got {normalize_wind_mark(13.0, 2.0, \"triple-jump\")}'; assert normalize_wind_mark(13.0, -1.0, 'triple-jump') == 13.15; assert normalize_wind_mark(13.0, None, 'triple-jump') == 13.0; assert normalize_wind_mark(1.80, 2.0, 'high-jump') == 1.80; print('PASS')\"",
+        "python3 -c \"import sys; sys.path.insert(0,'businesses/data-services/tf-predictor/scripts'); from predict_event import WIND_CORRECTION_FACTOR; assert 'triple-jump' in WIND_CORRECTION_FACTOR; assert 'long-jump' in WIND_CORRECTION_FACTOR; assert WIND_CORRECTION_FACTOR['triple-jump'] == 0.15; print('PASS')\""
+      ],
+      "qualityChecks": [
+        "python3 -m py_compile businesses/data-services/tf-predictor/scripts/predict_event.py"
+      ],
+      "priority": 3,
+      "passes": true,
+      "attempts": 0,
+      "dependsOn": [
+        "US-002"
+      ],
+      "dependencyPolicy": "block",
+      "contextFiles": [
+        "businesses/data-services/tf-predictor/scripts/predict_event.py"
+      ],
+      "_slug": "tf-model-wind",
+      "notes": "Implemented US-003: Added WIND_CORRECTION_FACTOR dict (triple-jump: 0.15, long-jump: 0.10) and normalize_wind_mark() function to predict_event.py. Modified load_marks() to compute mark_wind_corrected "
+    }
+  ]
+}

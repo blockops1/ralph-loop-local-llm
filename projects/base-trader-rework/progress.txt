@@ -1,0 +1,22 @@
+# Ralph Progress — base-trader-rework
+
+## Stories
+
+| ID | Title | Status | Attempts |
+|----|-------|--------|----------|
+| RW-002 | Remove duplicate import requests in execute.py | ✅ PASSED | 1 |
+| RW-004 | Only mark position closed on successful sell in exit_monitor.py | ✅ PASSED | 1 |
+| RW-005 | Add BASE_WALLET_PRIVATE_KEY to .env comment | ✅ PASSED | 1 |
+
+## [2026-03-26 19:42]
+✅ RW-002: Removed duplicate `import requests as _requests` at line 247 in execute.py. Function now uses module-level `requests` import. File compiles OK.
+✅ RW-004: exit_monitor.py — removed premature `pos['status'] = 'closed'` from all exit blocks. Now sets `pos['status'] = 'closed'` only after `sell_status == 'ok'`. On failure sets `pos['status'] = 'exit_failed'` and reverts tranche statuses.
+✅ RW-005: Updated .env comment to include `BASE_WALLET_PRIVATE_KEY`.
+
+## Notes
+- RW-001 and RW-003 were already correct in the live code — removed from rework scope.
+- Ralph was too slow for these surgical edits (8+ min per story); fixes applied manually.
+
+## [2026-03-26 19:46]
+✅ RW-005: Add BASE_WALLET_PRIVATE_KEY to .env comment
+Added BASE_WALLET_PRIVATE_KEY comment to .env file at businesses/horizen-zkverify/base-trader/.env. The new comment line "# BASE_WALLET_PRIVATE_KEY=  # Your Base wallet private key (do not commit)" provides clear documentation for this sensitive variable.

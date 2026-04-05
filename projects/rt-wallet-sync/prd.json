@@ -1,0 +1,35 @@
+{
+  "project": "rt-wallet-sync",
+  "description": "Range trader wallet sync — auto-detect manually deposited tokens and register them as active positions with S/R-based stop/target.",
+  "branch": "dev",
+  "qualityChecks": [
+    "python3 -m py_compile businesses/horizen-zkverify/range-trader/scripts/range_wallet_sync.py",
+    "python3 -m py_compile businesses/horizen-zkverify/range-trader/scripts/run_range_pipeline.py"
+  ],
+  "contextFiles": [
+    "businesses/horizen-zkverify/range-trader/scripts/range_scanner.py",
+    "businesses/horizen-zkverify/range-trader/scripts/range_positions.py",
+    "businesses/horizen-zkverify/range-trader/scripts/run_range_pipeline.py",
+    "businesses/horizen-zkverify/range-trader/scripts/range_execute.py"
+  ],
+  "stories": [
+    {
+      "id": "WS-001",
+      "title": "Create range_wallet_sync.py",
+      "description": "Create businesses/horizen-zkverify/range-trader/scripts/range_wallet_sync.py.\n\nThis script detects tokens that are present in the wallet but have no open position in range_positions.json, and auto-registers them as active positions.\n\nThe token list and addresses are defined in range_scanner.py:\n```\nTOKENS = {\n    'ZEN':   '0xf43eb8de897fbc7f2502483b2bef7bb9ea179229',\n    'VFY':   '0xa749de6c28262b7ffbc5de27dc845dd7ecd2b358',\n    'ZRO':   '0x6985884c4392d348587b19cb9eaaf157f13271cd',\n    'WETH':  '0x4200000000000000000000000000000000000006',\n    'AAVE':  '0x63706e401c06ac8513145b7687a14804d17f814b',\n    'CRV':   '0x8ee73c484a26e0a5df2ee2a4960b789967dd0415',\n    'EIGEN': '0x2081ab0d9ec9e4303234ab26d86b20b3367946ee',\n    'ETHFI': '0x6c240dda6b5c336df09a4d011139beaaa1ea2aa2',\n    'W':     '0xb0ffa8000886e57f86dd5264b9582b2ad87b2b91'\n}\n```\n\nUse these environment variables (load from .env if not set):\n- BASE_RPC_URL (default: https://mainnet.base.org)\n- METAMASK_WALLET_ADDRESS\n\nLogic:\n\n```python\nERC20_ABI = [{\"inputs\":[{\"name\":\"account\",\"type\":\"address\"}],\"name\":\"balanceOf\",\n              \"outputs\":[{\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},\n             {\"inputs\":[],\"name\":\"decimals\",\n              \"outputs\":[{\"name\":\"\",\"type\":\"uint8\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]\n\nDUST_ETH = 0.0001  # ignore balances worth less than this in ETH\n\ndef sync_wallet_to_positions():\n    \"\"\"Check on-chain balances for all tracked tokens.\n    For any token with balance > dust and no open position: auto-register.\n    For any open position where on-chain balance changed: update token_balance.\n    Returns list of new positions registered (for logging).\"\"\"\n```\n\nFor each token in TOKENS:\n1. Fetch on-chain balance via ERC-20 balanceOf (use decimals() to get decimals)\n2. Load current positions from range_positions.load_positions()\n3. Find existing open position for this symbol if any\n4. If on-chain balance > dust AND no open position:\n   - Call range_scanner.scan_one(symbol, address) to get S/R and price_eth\n   - If S/R data available: set entry_price=price_eth, stop_loss=sr['support']*0.995, exit_price=sr['resistance']*0.995\n   - If no S/R: set entry_price=price_eth, stop_loss=price_eth*0.90, exit_price=price_eth*1.20\n   - Call range_positions.add_position() with full position dict including source='manual_deposit'\n   - Send Telegram notification: f'[WALLET SYNC] Registered {symbol}: {bal:.4f} tokens @ E:{price_eth:.6f}'\n5. If open position exists AND on-chain balance differs by >1% from recorded token_balance:\n   - Update the position's token_balance to match on-chain balance\n   - Save via range_positions.save_positions()\n   - Print log line: f'[WALLET SYNC] Updated {symbol} balance: {old:.4f} -> {new:.4f}'\n\nFor Telegram notification, use:\n```python\nimport requests, os\ndef notify(msg):\n    token = os.environ.get('TELEGRAM_BOT_TOKEN', '')\n    chat_id = os.environ.get('TELEGRAM_CHAT_ID', '')\n    if token and chat_id:\n        requests.post(f'https://api.telegram.org/bot{token}/sendMessage',\n                      json={'chat_id': chat_id, 'text': msg}, timeout=10)\n```\n\nAdd a scan_one() function to range_scanner.py that scans a single token:\n```python\ndef scan_one(symbol: str, address: str) -> dict:\n    \"\"\"Scan a single token and return the same dict format as scan_all().\"\"\"\n    # Reuse existing get_top_pool, get_ohlcv, get_price_eth, get_support_resistance logic\n    # Return same dict as scan_all() produces per token\n```\n\nWS-001 acceptance criteria:\n- python3 -m py_compile businesses/horizen-zkverify/range-trader/scripts/range_wallet_sync.py\n- python3 -m py_compile businesses/horizen-zkverify/range-trader/scripts/range_scanner.py",
+      "acceptanceCriteria": [
+        "python3 -m py_compile businesses/horizen-zkverify/range-trader/scripts/range_wallet_sync.py",
+        "python3 -m py_compile businesses/horizen-zkverify/range-trader/scripts/range_scanner.py"
+      ]
+    },
+    {
+      "id": "WS-002",
+      "title": "Integrate wallet sync into pipeline",
+      "description": "Edit businesses/horizen-zkverify/range-trader/scripts/run_range_pipeline.py to call wallet sync at pipeline start.\n\nAt the top of the main() function, BEFORE the scan_all() call, add:\n\n```python\nfrom range_wallet_sync import sync_wallet_to_positions\n# Wallet sync: register manually deposited tokens\nprint('[PIPELINE] Wallet sync...')\ntry:\n    new_positions = sync_wallet_to_positions()\n    if new_positions:\n        print(f'[PIPELINE] Wallet sync registered {len(new_positions)} new position(s)')\nexcept Exception as e:\n    print(f'[PIPELINE] Wallet sync error: {e}')\n    errors.append(f'wallet_sync: {e}')\n```\n\nWS-002 acceptance criteria:\n- python3 -m py_compile businesses/horizen-zkverify/range-trader/scripts/run_range_pipeline.py\n- grep -n 'sync_wallet_to_positions' businesses/horizen-zkverify/range-trader/scripts/run_range_pipeline.py",
+      "acceptanceCriteria": [
+        "python3 -m py_compile businesses/horizen-zkverify/range-trader/scripts/run_range_pipeline.py",
+        "grep -n 'sync_wallet_to_positions' businesses/horizen-zkverify/range-trader/scripts/run_range_pipeline.py"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Replace CLI wallet-balance with on-chain query in run_pipeline.py",
+      "description": "Current state: run_pipeline.py at businesses/horizen-zkverify/base-trader/scripts/run_pipeline.py takes --wallet-balance as a CLI arg (default 50.0 USD). The actual wallet balance is not queried. execute.py has get_eth_balance_usd() which queries on-chain balance.\n\nWhat to build:\n1. At pipeline start (after .env load, before token processing), query actual wallet balance:\n   - Import get_eth_balance_usd and get_web3 from execute\n   - wallet_balance = get_eth_balance_usd(get_web3(), wallet_address)\n   - Print: '[PIPELINE] On-chain wallet balance: ${wallet_balance:.2f}'\n   - If query fails, fall back to --wallet-balance CLI arg with a warning\n\n2. Add min_trade_usd to settings.json (default: 5.0):\n   - If wallet_balance * 0.20 < min_trade_usd, skip trading: 'Wallet too small for 20% position'\n   - This prevents gas-eating micro-trades\n\n3. In decision.py format_decision(), add pool TVL cap:\n   - Accept pool_tvl parameter\n   - position_usd = min(wallet_balance * 0.20, pool_tvl * 0.01)\n   - Never trade > 1% of pool TVL (prevents moving the market)\n\nConstraints:\n- Do NOT modify scanner.py, signal_filter.py, or execute.py\n- Keep --wallet-balance CLI arg as fallback\n- On-chain query must timeout after 10 seconds (don't stall pipeline)\n- The wallet address comes from BASE_WALLET_ADDRESS env var (already used in reconcile.py)",
+      "acceptanceCriteria": [
+        "python3 -m py_compile businesses/horizen-zkverify/base-trader/scripts/run_pipeline.py",
+        "python3 -m py_compile businesses/horizen-zkverify/base-trader/scripts/decision.py",
+        "grep -q 'get_eth_balance_usd' businesses/horizen-zkverify/base-trader/scripts/run_pipeline.py",
+        "grep -q 'min_trade_usd' businesses/horizen-zkverify/base-trader/scripts/run_pipeline.py"
+      ],
+      "qualityChecks": [
+        "python3 -m py_compile businesses/horizen-zkverify/base-trader/scripts/run_pipeline.py",
+        "python3 -m py_compile businesses/horizen-zkverify/base-trader/scripts/decision.py"
+      ],
+      "priority": 1,
+      "passes": true,
+      "attempts": 0,
+      "dependsOn": [],
+      "dependencyPolicy": "block",
+      "contextFiles": [
+        "businesses/horizen-zkverify/base-trader/scripts/run_pipeline.py",
+        "businesses/horizen-zkverify/base-trader/scripts/decision.py",
+        "businesses/horizen-zkverify/base-trader/scripts/execute.py"
+      ],
+      "_slug": "bt-dynamic-sizing",
+      "notes": "Implemented US-001: Replaced CLI wallet-balance with on-chain query in run_pipeline.py. Key changes:\n1. Imported get_eth_balance_usd and get_web3 from execute.py\n2. Added on-chain balance query at pip"
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+# Ralph Progress Log — bt-sm-signal
+Started: 2026-03-17T17:15:56.485565
+---
+
+## [2026-03-17 17:19]
+✅ US-001: Add get_sm_holdings() to scanner.py — SM wallet count and token holdings from Nansen
+Implemented get_sm_holdings() function in scanner.py with 4-hour disk cache (sm_holdings_cache.json). The function:
+1. Caches SM holdings data from Nansen's POST /api/v1/smart-money/holdings endpoint
+2. Returns dict keyed by token_address.lower() with sm_wallet_count, total_value_usd, symbol
+3. Upda
+
+## [2026-03-17 17:22]
+✅ US-002: Add get_flow_intelligence() to scanner.py — multi-timeframe buy/sell pressure from Nansen
+Implemented US-002: Added get_flow_intelligence() function to scanner.py with per-token disk cache (4h TTL, flow_intelligence_cache.json). The function calls Nansen's POST /api/v1/tgm/flow-intelligence endpoint to fetch multi-timeframe net flow data (1h, 24h, 7d, 30d) and buy/sell pressure percentag
+
+## [2026-03-17 17:26]
+✅ US-003: Wire enriched SM data into run_pipeline.py — two-tier evaluation
+Implemented US-003: Two-tier SM evaluation in run_pipeline.py. Key changes:
+1. Added tier-based scoring: Tier 1 uses screener-only data (cheap), Tier 2 calls get_sm_netflow(address, enrich=True) for multi-timeframe flow data
+2. Tokens with Tier 1 score < 100 are skipped; only those >= 100 proceed to

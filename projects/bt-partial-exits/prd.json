@@ -1,0 +1,30 @@
+{
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Add partial exit support to exit_monitor.py with tranche-based position model",
+      "description": "Current state: exit_monitor.py at businesses/horizen-zkverify/base-trader/scripts/exit_monitor.py sells 100% of a position on any exit trigger (stop_loss, target_hit, time_limit). There's no ability to take partial profit.\n\nWhat to build:\n1. Add a 'tranches' field to each position in positions.json:\n   - When a position is first opened, it has one tranche: [{pct: 1.0, status: 'open', stop_loss: <original>}]\n   - After a partial exit, remaining tranches are updated\n\n2. Modify check_exits() exit logic:\n\n   a. target_hit (price >= target):\n      - Sell 50% (first tranche)\n      - Move stop_loss on remaining 50% to entry_price (breakeven stop)\n      - Set a new trailing_stop field: current_price * 0.95 (5% trailing)\n      - Status: 'partial_exit'\n      - Log the partial exit to trade_log.jsonl\n\n   b. sm_netflow_negative (not currently implemented but design for it):\n      - Sell 75%\n      - Tight trailing stop on remaining 25%: current_price * 0.97 (3% trail)\n      - Status: 'partial_exit'\n\n   c. stop_loss (price <= stop_loss):\n      - Sell ALL remaining tranches (100% of whatever is left)\n      - Status: 'closed'\n\n   d. time_limit (> 3 days):\n      - Sell ALL remaining tranches\n      - Status: 'closed'\n\n   e. trailing_stop check (new):\n      - If position has a trailing_stop field and current_price <= trailing_stop:\n        Sell ALL remaining tranches\n        Status: 'closed'\n      - If current_price > entry and trailing_stop exists:\n        Update trailing_stop = max(trailing_stop, current_price * 0.95)\n        (trail ratchets up, never down)\n\n3. Modify sell call: sell_token(address, sell_pct=0.5) for partial exits (execute.py already supports sell_pct).\n\n4. Update positions.json write: include tranches, trailing_stop, partial exit timestamps.\n\nConstraints:\n- Do NOT modify execute.py, signal_filter.py, scanner.py, or run_pipeline.py\n- Backward compatible: if a position has no 'tranches' field, treat it as single tranche [{pct: 1.0, status: 'open'}]\n- sell_token() already accepts sell_pct parameter \u2014 use it\n- Telegram alerts for partial exits should include '(PARTIAL)' prefix",
+      "acceptanceCriteria": [
+        "python3 -m py_compile businesses/horizen-zkverify/base-trader/scripts/exit_monitor.py",
+        "grep -q 'tranche' businesses/horizen-zkverify/base-trader/scripts/exit_monitor.py",
+        "grep -q 'trailing_stop' businesses/horizen-zkverify/base-trader/scripts/exit_monitor.py",
+        "grep -q 'partial_exit' businesses/horizen-zkverify/base-trader/scripts/exit_monitor.py",
+        "grep -q 'sell_pct' businesses/horizen-zkverify/base-trader/scripts/exit_monitor.py"
+      ],
+      "qualityChecks": [
+        "python3 -m py_compile businesses/horizen-zkverify/base-trader/scripts/exit_monitor.py"
+      ],
+      "priority": 1,
+      "passes": true,
+      "attempts": 0,
+      "dependsOn": [],
+      "dependencyPolicy": "block",
+      "contextFiles": [
+        "businesses/horizen-zkverify/base-trader/scripts/exit_monitor.py",
+        "businesses/horizen-zkverify/base-trader/scripts/execute.py"
+      ],
+      "_slug": "bt-partial-exits",
+      "notes": "Implemented partial exit support in exit_monitor.py with a tranche-based position model. Key changes:\n\n1. Added `get_tranches()` and `get_total_open_pct()` helper functions for backward-compatible tra"
+    }
+  ]
+}

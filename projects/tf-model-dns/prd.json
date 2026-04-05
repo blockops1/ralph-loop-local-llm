@@ -1,0 +1,57 @@
+{
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Add estimate_dns_probability() with event priority history to predict_event.py",
+      "description": "Add two new functions to businesses/data-services/tf-predictor/scripts/predict_event.py.\nDo NOT modify any existing functions. Append both functions before the final return in the file \u2014 add them after the pool_distribution() function (around line 430).\n\nFUNCTION 1: get_event_priority_history(tfrrs_id, event_slug, database)\nPurpose: query DB for how often an athlete competes in this event vs scratches.\nImplementation:\n  conn = database\n  rows = conn.execute(\"\"\"\n      SELECT\n        COUNT(*) as total_entries,\n        SUM(CASE WHEN mark_metric IS NOT NULL THEN 1 ELSE 0 END) as competed,\n        SUM(CASE WHEN mark_metric IS NULL THEN 1 ELSE 0 END) as dns_count\n      FROM marks\n      WHERE tfrrs_id = ? AND event_slug = ?\n  \"\"\", (tfrrs_id, event_slug)).fetchone()\n  total = rows[0] or 0\n  competed = rows[1] or 0\n  dns = rows[2] or 0\n  # Check if athlete competes in multiple events (splitter detection)\n  other_events = conn.execute(\"\"\"\n      SELECT COUNT(DISTINCT event_slug) FROM marks WHERE tfrrs_id = ? AND event_slug != ?\n  \"\"\", (tfrrs_id, event_slug)).fetchone()[0] or 0\n  return {\n      \"total_entries\": total,\n      \"competed_rate\": competed / total if total > 0 else 1.0,\n      \"dns_rate\": dns / total if total > 0 else 0.0,\n      \"splits_events\": other_events >= 2,\n  }\n\nFUNCTION 2: estimate_dns_probability(tfrrs_id, event_slug, meet_slug, marks, gap_info, database)\n  Parameters:\n    tfrrs_id: str\n    event_slug: str\n    meet_slug: str\n    marks: list of mark dicts (same format as load_marks() returns)\n    gap_info: dict with keys gap_status (\"active\"|\"stale\"|\"unknown\") and gap_days (int)\n    database: sqlite3 connection\n  \n  Implementation:\n    history = get_event_priority_history(tfrrs_id, event_slug, database)\n    base_dns = history[\"dns_rate\"]\n    factors = []\n    mark_penalty = 0.0\n    \n    # Factor 1: competition gap\n    gap_status = gap_info.get(\"gap_status\", \"unknown\")\n    gap_days = gap_info.get(\"gap_days\", 0)\n    if gap_status == \"stale\" or gap_days > 90:\n        base_dns += 0.20\n        factors.append(f\"competition_gap_{gap_days}d\")\n    elif gap_status == \"active\" and gap_days <= 14:\n        base_dns -= 0.05\n    \n    # Factor 2: splitter penalty\n    splits_events = history[\"splits_events\"]\n    if splits_events:\n        base_dns += 0.10\n        factors.append(\"multi_event_athlete\")\n        mark_penalty = -0.02  # 2% mark penalty\n    \n    # Factor 3: mark variance (inconsistent athlete = higher DNS risk)\n    if len(marks) >= 4:\n        import numpy as np\n        vals = [m[\"mark_metric\"] for m in marks if m.get(\"mark_metric\")]\n        if len(vals) >= 4:\n            cv = float(np.std(vals)) / float(np.mean(vals)) if np.mean(vals) > 0 else 0\n            if cv > 0.05:\n                base_dns += 0.05\n                factors.append(\"high_variance\")\n    \n    dns_probability = min(max(base_dns, 0.0), 0.60)\n    return {\n        \"dns_probability\": round(dns_probability, 3),\n        \"dns_factors\": factors,\n        \"splits_events\": splits_events,\n        \"mark_penalty\": mark_penalty,\n    }\n\nAfter appending both functions, verify with py_compile only. Do not modify any existing code.",
+      "acceptanceCriteria": [
+        "python3 -m py_compile businesses/data-services/tf-predictor/scripts/predict_event.py",
+        "python3 -c \"import sys; sys.path.insert(0,'businesses/data-services/tf-predictor/scripts'); from predict_event import estimate_dns_probability; import db as dbmod; database=dbmod.get_db(); r = estimate_dns_probability('12345', 'triple-jump', 'fl-relays', [], {'gap_status': 'stale', 'gap_days': 120}, database); assert 0.15 < r['dns_probability'] <= 0.50, f'got {r}'; assert isinstance(r['dns_factors'], list); print(f'dns_prob(stale)={r[\"dns_probability\"]} factors={r[\"dns_factors\"]} PASS')\"",
+        "python3 -c \"import sys; sys.path.insert(0,'businesses/data-services/tf-predictor/scripts'); from predict_event import get_event_priority_history; import db as dbmod; database=dbmod.get_db(); r = get_event_priority_history('99999', 'triple-jump', database); assert 'competed_rate' in r; assert 'dns_rate' in r; assert 'splits_events' in r; print(f'priority_history={r} PASS')\"",
+        "python3 -c \"import sys; sys.path.insert(0,'businesses/data-services/tf-predictor/scripts'); from predict_event import estimate_dns_probability; import db as dbmod; database=dbmod.get_db(); r = estimate_dns_probability('12345', 'triple-jump', 'fl-relays', [{'mark_metric':12.0},{'mark_metric':12.1},{'mark_metric':12.0},{'mark_metric':12.1}], {'gap_status': 'active', 'gap_days': 10}, database); assert 0.0 <= r['dns_probability'] <= 0.50; assert isinstance(r['mark_penalty'], float); print(f'dns_prob(active,normal)={r[\"dns_probability\"]} PASS')\""
+      ],
+      "qualityChecks": [
+        "python3 -m py_compile businesses/data-services/tf-predictor/scripts/predict_event.py"
+      ],
+      "priority": 1,
+      "passes": true,
+      "attempts": 1,
+      "dependsOn": [],
+      "dependencyPolicy": "block",
+      "contextFiles": [
+        "businesses/data-services/tf-predictor/scripts/predict_event.py",
+        "businesses/data-services/tf-predictor/scripts/db.py"
+      ],
+      "_slug": "tf-model-dns",
+      "lastAttempt": "2026-03-17T20:52:30.441227+00:00",
+      "error": "Model API error: 400 Client Error: Bad Request for url: http://localhost:11434/v1/chat/completions \u2014 body: {\"error\":{\"code\":400,\"message\":\"request (33344 tokens) exceeds the available context size (32768 tokens), try increasing it\",\"type\":\"exceed_context_size_error\",\"n_prompt_tokens\":33344,\"n_ctx\":32768}}",
+      "status": "done"
+    },
+    {
+      "id": "US-002",
+      "title": "Add DNS probability and split-event flags to generate_report.py output",
+      "description": "Current state: generate_report.py at businesses/data-services/tf-predictor/scripts/generate_report.py renders prediction reports. It does not display DNS probability or split-event penalties.\n\nThe prediction JSON files now contain these keys per athlete (from US-001):\n- 'dns_probability': float 0.0-1.0\n- 'dns_factors': list of strings\n- 'splits_events': bool\n- 'mark_penalty': float\n\nWhat to build:\n1. In build_report(), for each athlete row in the table, if dns_probability >= 0.15, append a DNS risk indicator after the confidence column:\n   - dns_probability >= 0.30: ' DNS!' (high risk)\n   - dns_probability >= 0.15: ' DNS?' (moderate risk)\n   - Below 0.15: nothing shown\n   - If splits_events is True: ' SPLIT' instead of DNS indicator (they'll compete but underperform)\n\n2. Show the indicator by appending it to the Conf column text (e.g. 'med DNS?' or 'high SPLIT'). This avoids adding a new column.\n\n3. Only show indicators if the prediction data contains 'dns_probability' key (backward compatible).\n\n4. At the bottom of each event section, after the accuracy summary, add:\n   - 'DNS risk flagged: N athletes (dns_probability >= 0.15)' -- only if N > 0\n   - 'Split-event athletes: N (competing in both events, -2% mark penalty applied)' -- only if N > 0\n\n5. In validation mode, add a DNS accuracy check:\n   - For athletes flagged dns_probability >= 0.15: how many actually DNS'd?\n   - Print 'DNS prediction: X/Y flagged athletes actually DNS\\'d'\n\nConstraints:\n- Do NOT modify predict_event.py, db.py, or score_meet.py\n- Do NOT break existing table formatting for data without dns_probability\n- Table alignment must still be valid Markdown",
+      "acceptanceCriteria": [
+        "python3 -m py_compile businesses/data-services/tf-predictor/scripts/generate_report.py",
+        "grep -q 'dns_probability' businesses/data-services/tf-predictor/scripts/generate_report.py",
+        "grep -q 'DNS' businesses/data-services/tf-predictor/scripts/generate_report.py",
+        "grep -q 'SPLIT' businesses/data-services/tf-predictor/scripts/generate_report.py"
+      ],
+      "qualityChecks": [
+        "python3 -m py_compile businesses/data-services/tf-predictor/scripts/generate_report.py"
+      ],
+      "priority": 2,
+      "passes": true,
+      "attempts": 0,
+      "dependsOn": [
+        "US-001"
+      ],
+      "dependencyPolicy": "block",
+      "contextFiles": [
+        "businesses/data-services/tf-predictor/scripts/generate_report.py"
+      ],
+      "_slug": "tf-model-dns",
+      "notes": "Implemented US-002: Added DNS probability and split-event flags to generate_report.py output. Changes:\n1. Added DNS risk indicators (DNS! for >=0.30, DNS? for >=0.15) appended to confidence column\n2. "
+    }
+  ]
+}

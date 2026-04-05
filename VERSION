@@ -1,0 +1,2 @@
+0.3.0 -- TDD pattern added: test story first, implementation story second
+0.2.0 -- 3-stage pipeline added (pipeline_runner.py)

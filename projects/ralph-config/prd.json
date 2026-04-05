@@ -1,0 +1,60 @@
+{
+  "_comment": "Handoff test project \u2014 queued to run after ralph-cli completes. Tests multi-project overnight batch.",
+  "project": "ralph-config",
+  "slug": "ralph-config",
+  "branchName": "ralph/ralph-config-feature",
+  "description": "Add a config validation command to ralph: a --validate flag that checks config.yaml for required fields and reports errors.",
+  "contextFiles": [
+    "ralph/ralph.py",
+    "ralph/config.yaml"
+  ],
+  "qualityChecks": [
+    "python3 -m py_compile {file}"
+  ],
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Add validate_config() function to ralph.py",
+      "description": "Add a validate_config(cfg: dict) function to ralph.py that checks the config dict for required top-level keys: 'model', 'max_iterations', 'max_tokens'. Returns a list of missing key names (empty list if all present).",
+      "acceptanceCriteria": [
+        "Function validate_config(cfg) exists in ralph.py",
+        "Returns empty list when all required keys are present",
+        "Returns list of missing key names when any are absent",
+        "python3 -m py_compile ralph.py passes"
+      ],
+      "priority": 1,
+      "passes": true,
+      "attempts": 0,
+      "lastAttempt": "2026-03-11T11:39:12.971577+00:00",
+      "error": "Deprioritized \u2014 base-trader is priority",
+      "notes": "Marked complete \u2014 deprioritized, base-trader is priority",
+      "dependsOn": [],
+      "dependencyPolicy": "skip",
+      "_slug": "ralph-config"
+    },
+    {
+      "id": "US-002",
+      "title": "Add --validate flag to ralph.py argparse",
+      "description": "Add a --validate flag to ralph.py's argparse setup. When invoked, load config.yaml via load_config(), call validate_config() on the result, print 'Config OK' if valid or print each missing key prefixed with 'MISSING: ', then exit with code 0 (valid) or 1 (invalid).",
+      "acceptanceCriteria": [
+        "ralph/ralph.py compiles without error",
+        "--validate argument exists in argparse",
+        "Calls load_config() and validate_config()",
+        "Prints 'Config OK' when config is valid",
+        "Exits 0 on valid config, 1 on invalid",
+        "python3 -m py_compile ralph.py passes"
+      ],
+      "priority": 2,
+      "passes": true,
+      "attempts": 0,
+      "lastAttempt": null,
+      "error": "Deprioritized \u2014 base-trader is priority",
+      "notes": "Marked complete \u2014 deprioritized, base-trader is priority",
+      "dependsOn": [
+        "US-001"
+      ],
+      "dependencyPolicy": "skip",
+      "_slug": "ralph-config"
+    }
+  ]
+}

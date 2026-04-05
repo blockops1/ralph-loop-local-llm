@@ -1,0 +1,10 @@
+# Ralph Progress Log — bt-dynamic-sizing
+Started: 2026-03-17T17:30:56.450769
+---
+
+## [2026-03-17 18:01]
+✅ US-001: Replace CLI wallet-balance with on-chain query in run_pipeline.py
+Implemented US-001: Replaced CLI wallet-balance with on-chain query in run_pipeline.py. Key changes:
+1. Imported get_eth_balance_usd and get_web3 from execute.py
+2. Added on-chain balance query at pipeline start (after .env load, before token processing) with 10s timeout fallback to CLI arg
+3. Added

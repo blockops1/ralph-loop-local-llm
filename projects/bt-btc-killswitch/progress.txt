@@ -1,0 +1,11 @@
+# Ralph Progress Log — bt-btc-killswitch
+Started: 2026-03-17T17:30:56.208001
+---
+
+## [2026-03-17 17:43]
+❌ US-001 FAILED
+Model API error: 500 Client Error: Internal Server Error for url: http://localhost:11434/v1/chat/completions — body: {"error":{"code":500,"message":"Context size has been exceeded.","type":"server_error"}}
+
+## [2026-03-17 17:46]
+✅ US-001: Replace hardcoded BTC change with live CoinGecko price check
+Implemented US-001: Added get_btc_4h_change() function to fetch BTC 4h price change from CoinGecko free API (GET /coins/bitcoin/market_chart?vs_currency=usd&days=1). Function extracts current price and price from ~4h ago, calculates percentage change, returns 0.0 on any error (including rate limits)

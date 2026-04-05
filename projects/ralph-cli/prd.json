@@ -1,0 +1,81 @@
+{
+  "_comment": "Level 1 complexity test \u2014 multi-file, real cross-story dependencies, modifies existing ralph code",
+  "project": "ralph-cli",
+  "slug": "ralph-cli",
+  "branchName": "ralph/ralph-cli-feature",
+  "description": "Add CLI enhancements to ralph.py: a VERSION file, --version flag, and --list-projects flag.",
+  "contextFiles": [
+    "ralph/ralph.py",
+    "ralph/prd_manager.py"
+  ],
+  "qualityChecks": [
+    "python3 -m py_compile {file}"
+  ],
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Create VERSION file",
+      "description": "Create a plain-text file at ralph/VERSION containing the current semver string '0.1.0'. This file is the single source of truth for ralph's version number.",
+      "acceptanceCriteria": [
+        "File ralph/VERSION exists",
+        "Contents are exactly '0.1.0' (no trailing newline issues \u2014 strip() == '0.1.0')",
+        "File is readable via open('ralph/VERSION').read().strip()"
+      ],
+      "priority": 1,
+      "passes": true,
+      "attempts": 0,
+      "lastAttempt": null,
+      "error": null,
+      "notes": "Created ralph/VERSION file containing '0.1.0' as the single source of truth for ralph's version number. File verified to contain exactly '0.1.0' (strip() == '0.1.0'). Committed with message 'feat: US-001 \u2014 create VERSION file with semver 0.1.0'.",
+      "dependsOn": [],
+      "dependencyPolicy": "skip",
+      "_slug": "ralph-cli"
+    },
+    {
+      "id": "US-002",
+      "title": "Add --version flag to ralph.py",
+      "description": "Add a --version flag to ralph.py's argparse setup. When invoked with --version, ralph prints the version string read from ralph/VERSION and exits cleanly (exit code 0). The slug argument must become optional (nargs='?') so --version works without a project slug.",
+      "acceptanceCriteria": [
+        "ralph/ralph.py compiles without error",
+        "--version argument exists in argparse",
+        "When --version is passed, the script reads ralph/VERSION and prints the version",
+        "slug argument uses nargs='?' so --version works standalone",
+        "Script exits with code 0 after printing version"
+      ],
+      "priority": 2,
+      "passes": true,
+      "attempts": 0,
+      "lastAttempt": "2026-03-10T17:18:08.649927+00:00",
+      "error": null,
+      "notes": "Fixed manually \u2014 added --version flag to argparse; reads ralph/VERSION and prints via sys.exit(0). Verified: python3 ralph.py --version prints '0.1.0'.",
+      "dependsOn": [
+        "US-001"
+      ],
+      "dependencyPolicy": "skip",
+      "_slug": "ralph-cli"
+    },
+    {
+      "id": "US-003",
+      "title": "Add --list-projects flag to ralph.py",
+      "description": "Add a --list-projects flag to ralph.py's argparse setup. When invoked, ralph calls prd_manager.list_active_projects() and prints each project slug on its own line, then exits cleanly. The function list_active_projects() already exists in prd_manager.py \u2014 import and call it directly.",
+      "acceptanceCriteria": [
+        "ralph/ralph.py compiles without error",
+        "--list-projects argument exists in argparse",
+        "When --list-projects is passed, calls list_active_projects() from prd_manager",
+        "Each project slug is printed on its own line",
+        "Script exits with code 0 after listing"
+      ],
+      "priority": 3,
+      "passes": true,
+      "attempts": 0,
+      "lastAttempt": null,
+      "error": null,
+      "notes": "US-003 implemented: Added --list-projects flag to ralph.py. Changes: (1) Added list_active_projects to imports from prd_manager, (2) Added --list-projects argument to argparse, (3) Added handler that calls list_active_projects() and prints each slug on its own line, then exits with code 0. Verified:",
+      "dependsOn": [
+        "US-001"
+      ],
+      "dependencyPolicy": "skip",
+      "_slug": "ralph-cli"
+    }
+  ]
+}

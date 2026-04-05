@@ -1,0 +1,29 @@
+# Ralph Progress — solana-trader-audit
+
+## Stories
+
+| ID | Title | Status | Attempts |
+|----|-------|--------|----------|
+| REV-001 | Full codebase review against live trading spec | ✅ PASSED | 1 |
+
+## [2026-03-26 20:22]
+✅ REV-001: Manual audit complete. review.md written.
+
+**Findings:**
+- 0 critical (cleanest of the three traders)
+- 4 medium: scattered imports (requests in run_pipeline.py, time in decision.py), TELEGRAM_CHAT_ID spurious required, failed sells don't mark position status
+- 3 minor: non-atomic cooldown file, no price caching, paper_trade env override missing
+
+## [2026-03-27 00:05]
+✅ REV-002: Full codebase review - solana trader with Qwen 27B
+Completed REV-002: Full codebase review of solana-trader with Qwen 27B.
+
+Reviewed 8 files against the PRD specification:
+- config/config.yaml
+- scripts/scanner.py
+- scripts/signal_filter.py
+- scripts/decision.py
+- scripts/execute.py
+- scripts/exit_monitor.py
+- scripts/run_pipeline.py
+- scripts/posit

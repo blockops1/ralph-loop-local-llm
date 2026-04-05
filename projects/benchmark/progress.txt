@@ -1,0 +1,189 @@
+# Ralph Progress Log — benchmark
+Started: 2026-03-13T17:29:01
+---
+
+## [2026-03-13 13:29]
+✅ US-B01: token_scanner.py 422 handler
+Story US-B01 (token_scanner.py 422 handler) is already implemented. The get_price_ohlcv() function already has the required try/except block that catches requests.HTTPError, checks for status_code 422, prints '[SKIP OHLCV] No data for {token_address}', returns [], and re-raises any other HTTPError.
+
+## [2026-03-13 13:38]
+✅ US-B01: token_scanner.py 422 handler
+US-B01 already implemented. The `get_price_ohlcv()` function in `ralph_optimizer/sandbox/scripts/token_scanner.py` (lines 78-89) already contains the 422 handler:
+
+```python
+try:
+    r = requests.post(...)
+    r.raise_for_status()
+except requests.HTTPError as e:
+    if e.response and e.response.stat
+
+## [2026-03-13 13:50]
+✅ US-B02: signal_runner.py Telegram BUY alerts
+US-B02: signal_runner.py Telegram BUY alerts — IMPLEMENTED
+
+Added Telegram alert functionality to signal_runner.py:
+
+1. Created send_telegram_message() function that:
+   - Reads TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID from env vars
+   - Sends HTTP POST to Telegram API
+   - Returns True on success, F
+
+## [2026-03-13 13:55]
+✅ US-B01: token_scanner.py 422 handler
+Story US-B01 already implemented. The get_price_ohlcv() function in token_scanner.py already contains the 422 handler at lines 69-74 that catches requests.HTTPError, checks for status_code 422, prints the skip message, returns empty list, and re-raises other HTTP errors.
+
+## [2026-03-13 14:06]
+✅ US-B03: sandbox/scripts/record_trade.py manual trade logger
+US-B03: sandbox/scripts/record_trade.py manual trade logger — IMPLEMENTED
+
+Created `ralph_optimizer/sandbox/scripts/record_trade.py` that:
+
+1. **Reads JSON trade dict from stdin** with keys: ts, symbol, address, amount_usd, entry_price, support, resistance, tx
+
+2. **Appends as single JSONL line** to
+
+## [2026-03-13 19:49]
+✅ US-B01: token_scanner.py 422 handler
+Story US-B01 (token_scanner.py 422 handler) is already fully implemented. The `get_price_ohlcv()` function in `ralph_optimizer/sandbox/scripts/token_scanner.py` (lines 69-78) contains the required try/except block that:
+
+1. Catches `requests.HTTPError`
+2. Checks if `e.response.status_code == 422`
+3.
+
+## [2026-03-13 20:16]
+❌ US-B01 FAILED
+Loop ended without completion signal after 160 tool calls
+
+## [2026-03-13 20:17]
+❌ US-B01 FAILED
+Loop ended without completion signal after 160 tool calls
+
+## [2026-03-13 20:17]
+❌ US-B01 FAILED
+Loop ended without completion signal after 160 tool calls
+
+## [2026-03-13 20:17]
+❌ US-B02 FAILED
+Loop ended without completion signal after 160 tool calls
+
+## [2026-03-13 20:17]
+❌ US-B02 FAILED
+Loop ended without completion signal after 160 tool calls
+
+## [2026-03-13 20:17]
+❌ US-B02 FAILED
+Loop ended without completion signal after 160 tool calls
+
+## [2026-03-13 20:17]
+❌ US-B03 FAILED
+Loop ended without completion signal after 160 tool calls
+
+## [2026-03-13 20:17]
+❌ US-B03 FAILED
+Loop ended without completion signal after 160 tool calls
+
+## [2026-03-13 20:17]
+❌ US-B03 FAILED
+Loop ended without completion signal after 160 tool calls
+
+## [2026-03-13 20:18]
+❌ US-B01 FAILED
+Loop ended without completion signal after 160 tool calls
+
+## [2026-03-13 20:18]
+❌ US-B01 FAILED
+Loop ended without completion signal after 160 tool calls
+
+## [2026-03-13 20:18]
+❌ US-B01 FAILED
+Loop ended without completion signal after 160 tool calls
+
+## [2026-03-13 20:18]
+❌ US-B02 FAILED
+Loop ended without completion signal after 160 tool calls
+
+## [2026-03-13 20:18]
+❌ US-B02 FAILED
+Loop ended without completion signal after 160 tool calls
+
+## [2026-03-13 20:18]
+❌ US-B02 FAILED
+Loop ended without completion signal after 160 tool calls
+
+## [2026-03-13 20:18]
+❌ US-B03 FAILED
+Loop ended without completion signal after 160 tool calls
+
+## [2026-03-13 20:18]
+❌ US-B03 FAILED
+Loop ended without completion signal after 160 tool calls
+
+## [2026-03-13 20:18]
+❌ US-B03 FAILED
+Loop ended without completion signal after 160 tool calls
+
+## [2026-03-13 20:26]
+✅ US-B01: token_scanner.py 422 handler
+Story US-B01 (token_scanner.py 422 handler) is already fully implemented. The `get_price_ohlcv()` function in `ralph_optimizer/sandbox/scripts/token_scanner.py` contains the required try/except block at lines 69-78 that catches requests.HTTPError, checks for status_code 422, prints '[SKIP OHLCV] No
+
+## [2026-03-13 20:29]
+✅ US-B02: signal_runner.py Telegram BUY alerts
+US-B02 (signal_runner.py Telegram BUY alerts) was already fully implemented in the codebase. The file contains:
+
+1. `send_telegram_message()` function (lines 53-72) that reads TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID from env vars and sends HTTP POST to Telegram API
+2. Telegram alert sent after BUY s
+
+## [2026-03-13 20:35]
+✅ US-B03: sandbox/scripts/record_trade.py manual trade logger
+US-B03 implemented: Created `ralph_optimizer/sandbox/scripts/record_trade.py` — a manual trade logger that reads JSON from stdin (keys: ts, symbol, address, amount_usd, entry_price, support, resistance, tx), validates required keys, appends as JSONL to `sandbox/data/trade_log.jsonl`, and prints "Log
+
+## [2026-03-13 20:51]
+✅ US-B01: token_scanner.py 422 handler
+Story US-B01 (token_scanner.py 422 handler) is already fully implemented. The `get_price_ohlcv()` function in `ralph_optimizer/sandbox/scripts/token_scanner.py` (lines 69-78) contains the required try/except block that:
+
+1. Catches `requests.HTTPError`
+2. Checks if `e.response.status_code == 422`
+3.
+
+## [2026-03-13 20:54]
+✅ US-B02: signal_runner.py Telegram BUY alerts
+US-B02 (signal_runner.py Telegram BUY alerts) was already fully implemented in the codebase. The file contains:
+
+1. `send_telegram_message()` function (lines 53-72) that reads TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID from env vars and sends HTTP POST to Telegram API
+2. Telegram alert sent after BUY s
+
+## [2026-03-13 20:59]
+✅ US-B03: sandbox/scripts/record_trade.py manual trade logger
+US-B03 (sandbox/scripts/record_trade.py manual trade logger) was already fully implemented. The script reads JSON from stdin, validates required keys (ts, symbol, address, amount_usd, entry_price, support, resistance, tx), appends as JSONL to sandbox/data/trade_log.jsonl, and prints "Logged: {symbol
+
+## [2026-03-14 04:59]
+✅ US-B01: token_scanner.py 422 handler
+Story US-B01 (token_scanner.py 422 handler) was already fully implemented. The get_price_ohlcv() function in ralph_optimizer/sandbox/scripts/token_scanner.py contains the required try/except block at lines 69-78 that catches requests.HTTPError, checks for status_code 422, prints '[SKIP OHLCV] No dat
+
+## [2026-03-14 05:00]
+✅ US-B02: signal_runner.py Telegram BUY alerts
+US-B02 already implemented. The signal_runner.py file contains: (1) send_telegram_message() function that reads TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID from env vars and sends HTTP POST to Telegram API, (2) Telegram alert sent after BUY signals with format "🟢 BUY {symbol} @ {entry_price:.4f} | score
+
+## [2026-03-14 05:01]
+✅ US-B03: sandbox/scripts/record_trade.py manual trade logger
+US-B03 implemented: Created ralph_optimizer/sandbox/scripts/record_trade.py — a manual trade logger that reads JSON from stdin (keys: ts, symbol, address, amount_usd, entry_price, support, resistance, tx), validates required keys with clear error messages, appends as JSONL to sandbox/data/trade_log.
+
+## [2026-03-14 23:34]
+✅ US-B01: token_scanner.py 422 handler
+Implemented US-B01: Added try/except block to `get_price_ohlcv()` in `token_scanner.py` that catches `requests.HTTPError`. When status_code == 422, it prints '[SKIP OHLCV] No data for {token_address}' and returns [], re-raising any other HTTPError. The change wraps the requests.post() call and r.rai
+
+## [2026-03-14 23:34]
+❌ US-B02 FAILED
+Model API error: 400 Client Error: Bad Request for url: http://localhost:11434/v1/chat/completions
+
+## [2026-03-14 23:37]
+✅ US-B02: signal_runner.py Telegram BUY alerts
+Implemented US-B02: Added Telegram BUY alerts to signal_runner.py. Created `send_telegram_message()` function that reads TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID from environment variables and sends HTTP POST requests to the Telegram API. After a BUY signal fires, the function is called with the mess
+
+## [2026-03-14 23:39]
+❌ US-B03 FAILED
+Model API error: 400 Client Error: Bad Request for url: http://localhost:11434/v1/chat/completions
+
+## [2026-03-14 23:39]
+✅ US-B03: sandbox/scripts/record_trade.py manual trade logger
+US-B03 implemented: Created `ralph_optimizer/sandbox/scripts/record_trade.py` — a manual trade logger that reads JSON from stdin (keys: ts, symbol, address, amount_usd, entry_price, support, resistance, tx), validates required keys with clear error messages, appends as JSONL to sandbox/data/trade_lo

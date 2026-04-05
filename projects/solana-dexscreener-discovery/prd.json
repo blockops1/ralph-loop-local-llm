@@ -1,0 +1,59 @@
+{
+  "project": "solana-dexscreener-discovery",
+  "description": "Replace Solana Trader's shared-cache-based token discovery (reads Base Trader's nansen_cache.json) with independent Nansen token-screener discovery. Each trader pays its own credits. Solana Trader calls POST /api/v1/token-screener directly for Solana chain discovery, then uses its own flow_intel_cache.json for per-token scoring.",
+  "branch": "dev",
+  "qualityChecks": [
+    "python3 -m py_compile businesses/horizen-zkverify/solana-trader/scripts/scanner.py",
+    "grep -q 'nansen_cache\\|SHARED_CACHE\\|shared' businesses/horizen-zkverify/solana-trader/scripts/scanner.py && exit 1 || true"
+  ],
+  "contextFiles": [
+    "businesses/horizen-zkverify/solana-trader/scripts/scanner.py",
+    "businesses/horizen-zkverify/solana-trader/config/config.yaml"
+  ],
+  "userStories": [
+    {
+      "id": "SD-001",
+      "title": "Replace shared-cache read with independent Nansen token-screener call in Solana Trader",
+      "description": "Current state: load_candidate_tokens() in solana-trader/scripts/scanner.py reads from the shared Nansen cache at Path(__file__).parent.parent.parent / 'shared' / 'nansen_cache.json'. This cache is written by Base Trader. When Base Trader is down (no credits), the cache goes stale and Solana Trader gets tokens_scanned=0.\n\nWhat to build: Replace the shared-cache read with an independent Nansen token-screener API call for Solana chain.\n\nNew implementation of load_candidate_tokens():\n1. Make a POST to https://api.nansen.ai/api/v1/token-screener with body:\n   {chains: ['solana'], timeframe: '24h', min_liquidity: 100000, min_market_cap: 5000000, max_market_cap: 500000000, min_token_age_days: 30, pagination: {limit: 10, page: 1}}\n   Use the NANSEN_API_KEY from os.environ via _headers() (same headers as get_flow_intelligence)\n2. Parse response: for each item extract token_address, token_symbol, chain, liquidity, market_cap_usd, netflow, price_usd, volume\n3. Loop over pages 1-3 to collect up to 30 tokens (Nansen hard-caps at 10/page)\n4. Filter: stablecoins from config (USDC, USDT, USDS), skip non-solana entries\n5. Return list of dicts: [{symbol, address, chain='solana', liquidity_usd, market_cap_usd, price_usd, volume_usd, netflow_usd}]\n\nKeep: sys.path.insert, json/requests imports, Path imports, get_flow_intelligence() unchanged.\nRemove: SHARED_CACHE constant entirely.\n\nConstraints:\n- Keep get_flow_intelligence() unchanged -- it already uses Solana Trader's own flow_intel_cache.json\n- Keep get_sol_price_usd() and get_btc_4h_change() unchanged\n- Do NOT read from shared/nansen_cache.json or any file written by Base Trader\n- Each pipeline run pays Nansen discovery credits for Solana independently",
+      "acceptanceCriteria": [
+        "python3 -m py_compile businesses/horizen-zkverify/solana-trader/scripts/scanner.py",
+        "NANSEN_MOCK=1 python3 -c \"import sys; sys.path.insert(0,'businesses/horizen-zkverify/solana-trader/scripts'); from scanner import load_candidate_tokens; r=load_candidate_tokens({}); print(f'tokens={len(r)}')\""
+      ],
+      "qualityChecks": "python3 -m py_compile businesses/horizen-zkverify/solana-trader/scripts/scanner.py",
+      "priority": 1,
+      "passes": true,
+      "attempts": 0,
+      "dependsOn": [],
+      "dependencyPolicy": "block",
+      "contextFiles": [
+        "businesses/horizen-zkverify/solana-trader/scripts/scanner.py",
+        "businesses/horizen-zkverify/solana-trader/config/config.yaml"
+      ],
+      "_slug": "solana-dexscreener-discovery",
+      "notes": "Replaced shared Nansen cache read with independent token-screener API call in Solana Trader. Changes: removed SHARED_CACHE constant; load_candidate_tokens() now makes POST to https://api.nansen.ai/api"
+    },
+    {
+      "id": "SD-002",
+      "title": "Verify Solana Trader no longer reads from shared nansen cache",
+      "description": "Current state: after SD-001, scanner.py should have zero references to 'shared', 'nansen_cache', or SHARED_CACHE.\n\nWhat to do: grep scanner.py to confirm there are zero references to:\n- 'shared' directory path\n- 'nansen_cache.json'\n- SHARED_CACHE constant\n\nAny remaining reference is a bug.",
+      "acceptanceCriteria": [
+        "grep -q 'shared' businesses/horizen-zkverify/solana-trader/scripts/scanner.py && exit 1 || true",
+        "grep -q 'nansen_cache' businesses/horizen-zkverify/solana-trader/scripts/scanner.py && exit 1 || true",
+        "grep -q 'SHARED_CACHE' businesses/horizen-zkverify/solana-trader/scripts/scanner.py && exit 1 || true"
+      ],
+      "qualityChecks": "grep -c 'shared\\|nansen_cache\\|SHARED_CACHE' businesses/horizen-zkverify/solana-trader/scripts/scanner.py 2>/dev/null || echo '0'",
+      "priority": 2,
+      "passes": true,
+      "attempts": 0,
+      "dependsOn": [
+        "SD-001"
+      ],
+      "dependencyPolicy": "block",
+      "contextFiles": [
+        "businesses/horizen-zkverify/solana-trader/scripts/scanner.py"
+      ],
+      "_slug": "solana-dexscreener-discovery",
+      "notes": "Verified that scanner.py has no references to 'shared', 'nansen_cache', or 'SHARED_CACHE'. The file uses its own FLOW_CACHE_FILE path (data/flow_intel_cache.json) instead of any shared cache. Acceptan"
+    }
+  ]
+}

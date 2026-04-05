@@ -1,0 +1,30 @@
+{
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Add SM holdings as primary discovery source in scanner.py",
+      "description": "Current state: scanner.py at businesses/horizen-zkverify/base-trader/scripts/scanner.py discovers tokens via gt_discover_tokens() (GeckoTerminal trending pools). This is a retail/momentum signal, not an SM signal. The Nansen smart-money/holdings endpoint (added in bt-sm-signal US-001) returns what SM wallets actually hold.\n\nWhat to build:\n1. Add discover_sm_from_holdings(chain='base', limit=20) function:\n   - Call get_sm_holdings(chain) (already cached, 0 extra credits)\n   - Filter to tokens with sm_wallet_count >= 3\n   - Sort by sm_wallet_count descending (most SM interest first)\n   - Return list of token dicts matching the discovery format: {address, symbol, name, volume_24h, market_cap_usd, holders_count, source: 'sm_holdings'}\n   - volume_24h and market_cap_usd can be 0 (will be enriched later from GeckoTerminal)\n\n2. Update discover_sm_tokens() to merge both sources:\n   - First: tokens from discover_sm_from_holdings() (SM signal, primary)\n   - Second: tokens from _discover_from_screener() (screener netflow, secondary)\n   - Third: tokens from gt_discover_tokens() (GeckoTerminal trending, supplement)\n   - Deduplicate by address (SM source takes priority)\n   - Return merged list, capped at limit\n\nConstraints:\n- Do NOT modify run_pipeline.py, signal_filter.py, or any other file\n- GeckoTerminal discovery stays as a supplement \u2014 do not remove it\n- Mock mode must return SM holdings tokens in the discovery list\n- If get_sm_holdings() returns empty (API error), fall back to existing behavior",
+      "acceptanceCriteria": [
+        "python3 -m py_compile businesses/horizen-zkverify/base-trader/scripts/scanner.py",
+        "grep -q 'discover_sm_from_holdings' businesses/horizen-zkverify/base-trader/scripts/scanner.py",
+        "grep -q 'sm_holdings' businesses/horizen-zkverify/base-trader/scripts/scanner.py",
+        "python3 -c \"import sys,os; os.environ['NANSEN_MOCK']='1'; sys.path.insert(0,'businesses/horizen-zkverify/base-trader/scripts'); from scanner import discover_sm_tokens; tokens=discover_sm_tokens(); assert len(tokens)>0; sources=set(t.get('source','') for t in tokens); print(f'Sources: {sources}, count={len(tokens)} PASS')\""
+      ],
+      "qualityChecks": [
+        "python3 -m py_compile businesses/horizen-zkverify/base-trader/scripts/scanner.py"
+      ],
+      "priority": 1,
+      "passes": true,
+      "attempts": 0,
+      "dependsOn": [],
+      "dependencyPolicy": "block",
+      "contextFiles": [
+        "businesses/horizen-zkverify/base-trader/scripts/scanner.py"
+      ],
+      "_slug": "bt-sm-discovery",
+      "lastAttempt": "2026-03-17T21:43:51.920037+00:00",
+      "error": "Model API error: 500 Client Error: Internal Server Error for url: http://localhost:11434/v1/chat/completions \u2014 body: {\"error\":{\"code\":500,\"message\":\"Failed to parse tool call arguments as JSON: [json.exception.parse_error.101] parse error at line 1, column 25571: syntax error while parsing value - invalid string: missing closing quote; last read: '\\\"\\\\\\\"\\\\\\\"\\\\\\\"\\\\nscanner.py - Nansen API wrapper with disk-based caching\\\\n\\\\nProvides functions to fetch token data from Nansen API:\\\\n- get_price_oh",
+      "notes": "Implemented US-001: Added SM holdings as primary discovery source in scanner.py.\n\nChanges:\n1. Added `discover_sm_from_holdings(chain, limit)` function that:\n   - Calls `get_sm_holdings(chain)` (alread"
+    }
+  ]
+}

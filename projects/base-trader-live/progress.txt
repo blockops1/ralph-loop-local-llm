@@ -1,0 +1,75 @@
+# Ralph Progress Log — base-trader-live
+Started: 2026-03-15T10:11:08.128555
+---
+
+## [2026-03-15 10:14]
+❌ US-001 FAILED
+Model API error: 400 Client Error: Bad Request for url: http://localhost:11434/v1/chat/completions
+
+## [2026-03-15 10:15]
+✅ US-001: Strip mock/paper mode from run_pipeline.py
+US-001 complete. The file run_pipeline.py already had mock/paper mode logic removed — no changes were needed. All acceptance criteria pass: syntax check OK, grep confirms no paper/mock references remain, and --help output shows only the --wallet-balance argument (no --mock or --paper). The pipeline
+
+## [2026-03-15 10:16]
+❌ US-002 FAILED
+Model API error: 400 Client Error: Bad Request for url: http://localhost:11434/v1/chat/completions
+
+## [2026-03-15 10:17]
+❌ US-002 FAILED
+Model API error: 400 Client Error: Bad Request for url: http://localhost:11434/v1/chat/completions
+
+## [2026-03-15 10:18]
+❌ US-002 FAILED
+Model API error: 400 Client Error: Bad Request for url: http://localhost:11434/v1/chat/completions
+
+## [2026-03-15 10:18]
+❌ US-004 FAILED
+Model API error: 400 Client Error: Bad Request for url: http://localhost:11434/v1/chat/completions
+
+## [2026-03-15 10:19]
+❌ US-004 FAILED
+Model API error: 400 Client Error: Bad Request for url: http://localhost:11434/v1/chat/completions
+
+## [2026-03-15 10:20]
+❌ US-004 FAILED
+Model API error: 400 Client Error: Bad Request for url: http://localhost:11434/v1/chat/completions
+
+## [2026-03-15 10:23]
+❌ US-002 FAILED
+Model API error: 400 Client Error: Bad Request for url: http://localhost:11434/v1/chat/completions — body: {"error":{"message":"invalid message content type: \u003cnil\u003e","type":"invalid_request_error","param":null,"code":null}}
+
+## [2026-03-15 10:24]
+❌ US-002 FAILED
+Model API error: 400 Client Error: Bad Request for url: http://localhost:11434/v1/chat/completions — body: {"error":{"message":"invalid message content type: \u003cnil\u003e","type":"invalid_request_error","param":null,"code":null}}
+
+## [2026-03-15 10:25]
+❌ US-002 FAILED
+Model API error: 400 Client Error: Bad Request for url: http://localhost:11434/v1/chat/completions — body: {"error":{"message":"invalid message content type: \u003cnil\u003e","type":"invalid_request_error","param":null,"code":null}}
+
+## [2026-03-15 10:26]
+❌ US-004 FAILED
+Model API error: 400 Client Error: Bad Request for url: http://localhost:11434/v1/chat/completions — body: {"error":{"message":"invalid message content type: \u003cnil\u003e","type":"invalid_request_error","param":null,"code":null}}
+
+## [2026-03-15 10:26]
+❌ US-004 FAILED
+Model API error: 400 Client Error: Bad Request for url: http://localhost:11434/v1/chat/completions — body: {"error":{"message":"invalid message content type: \u003cnil\u003e","type":"invalid_request_error","param":null,"code":null}}
+
+## [2026-03-15 10:28]
+✅ US-004: Update .env in base-trader dir with real wallet env vars
+Updated base-trader/.env to remove the stale BASE_WALLET placeholder and replaced it with comments pointing to ~/.openclaw/.env for credentials. Added NANSEN_MOCK=0 as required. All acceptance criteria pass: no 0x0000 placeholders, NANSEN_MOCK=0 present, and no PRIVATE_KEY values in the file.
+
+## [2026-03-15 10:44]
+❌ US-002 FAILED
+Model returned 3 consecutive empty responses — model stuck or refusing tools
+
+## [2026-03-15 10:47]
+❌ US-002 FAILED
+Model returned 3 consecutive empty responses — model stuck or refusing tools
+
+## [2026-03-15 11:22]
+✅ US-003: Wire execute.py into run_pipeline.py BUY branch
+US-003 complete. Modified exit_monitor.py to wire sell_token execution into all three exit branches (STOP, TARGET, SM). Each branch now calls sell_token(address), captures the tx_hash and status, then closes the position. run_pipeline.py already had buy_token wired in the BUY branch from a previous
+
+## [2026-03-15 11:23]
+✅ US-005: Update run-pipeline.sh to load .openclaw/.env and source venv
+US-005 complete. Updated run-pipeline.sh to: (1) load ~/.openclaw/.env for secrets like BASE_WALLET_PRIVATE_KEY and NANSEN_API_KEY, (2) activate the venv to ensure web3 and other deps are available, and (3) added set -e for error handling. All acceptance criteria pass: file is executable, contains b

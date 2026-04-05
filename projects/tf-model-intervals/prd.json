@@ -1,0 +1,52 @@
+{
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Add prediction intervals (P30/P50/P70) to project_mark() output",
+      "description": "Current state: predict_event.py at businesses/data-services/tf-predictor/scripts/predict_event.py returns a single predicted_mark from project_mark(). Confidence is communicated via a string ('high'/'medium'/'low') and a blunt discount (4%/1.5%/0%) applied to the mark itself, which distorts rankings.\n\nWhat to build:\n1. In project_mark(), after computing the predicted mark (before confidence discount), compute prediction intervals:\n\n   The intervals represent the range of plausible outcomes based on the athlete's mark variance and data density.\n\n   Method:\n   a. Compute std_dev from all_vals (already available as 'variance' in the code -- note: the existing code confusingly names it 'variance' but it is actually np.std)\n   b. Compute data_uncertainty = 1.0 / sqrt(len(marks)) -- uncertainty from sample size\n   c. total_uncertainty = std_dev * (1.0 + data_uncertainty)\n   d. p50 = predicted (the central estimate, BEFORE confidence discount)\n   e. p30 = p50 - (0.52 * total_uncertainty)  -- pessimistic: ~30th percentile\n   f. p70 = p50 + (0.52 * total_uncertainty)  -- optimistic: ~70th percentile\n   g. p10 = p50 - (1.28 * total_uncertainty)  -- floor scenario\n   h. p90 = p50 + (1.28 * total_uncertainty)  -- ceiling scenario\n\n   The 0.52 and 1.28 multipliers are z-scores for 30th/70th and 10th/90th percentiles assuming roughly normal distribution.\n\n   Apply PR ceiling and pool P99 cap to p70 and p90 (they should not exceed these caps).\n   Apply a floor of 0 to p10 and p30 (marks cannot be negative).\n\n2. Add these keys to the returned dict:\n   'p10': round(p10, 3),\n   'p30': round(p30, 3),\n   'p50': round(p50, 3),\n   'p70': round(p70, 3),\n   'p90': round(p90, 3),\n\n3. Keep the existing confidence discount on predicted_mark for backward compatibility -- p50 is the pre-discount value, predicted_mark is the post-discount value. Rankings still use predicted_mark. The intervals are supplementary.\n\nConstraints:\n- Do NOT modify db.py or score_meet.py\n- Do NOT change the existing return keys -- only ADD new ones\n- Do NOT remove the confidence discount from predicted_mark (that change comes later)\n- numpy is already imported",
+      "acceptanceCriteria": [
+        "python3 -m py_compile businesses/data-services/tf-predictor/scripts/predict_event.py",
+        "python3 -c \"import sys; sys.path.insert(0,'businesses/data-services/tf-predictor/scripts'); from predict_event import project_mark; from datetime import date; marks = [{'mark_metric': 12.0, 'date_parsed': date(2025,3,1), 'weight': 1.0, 'phase': 'early_outdoor', 'meet_name': 'test'}, {'mark_metric': 12.2, 'date_parsed': date(2025,4,1), 'weight': 1.0, 'phase': 'early_outdoor', 'meet_name': 'test'}, {'mark_metric': 12.4, 'date_parsed': date(2025,5,1), 'weight': 1.5, 'phase': 'late_outdoor', 'meet_name': 'test'}, {'mark_metric': 12.1, 'date_parsed': date(2025,6,1), 'weight': 1.5, 'phase': 'late_outdoor', 'meet_name': 'test'}]; r = project_mark(marks, date(2026,4,3), 'JR-3', 'triple-jump'); assert 'p30' in r, 'missing p30'; assert 'p50' in r, 'missing p50'; assert 'p70' in r, 'missing p70'; assert 'p10' in r, 'missing p10'; assert 'p90' in r, 'missing p90'; assert r['p30'] <= r['p50'] <= r['p70'], f'intervals not ordered: {r[\"p30\"]} {r[\"p50\"]} {r[\"p70\"]}'; print(f'p10={r[\"p10\"]} p30={r[\"p30\"]} p50={r[\"p50\"]} p70={r[\"p70\"]} p90={r[\"p90\"]} PASS')\""
+      ],
+      "qualityChecks": [
+        "python3 -m py_compile businesses/data-services/tf-predictor/scripts/predict_event.py"
+      ],
+      "priority": 1,
+      "passes": true,
+      "attempts": 0,
+      "dependsOn": [],
+      "dependencyPolicy": "block",
+      "contextFiles": [
+        "businesses/data-services/tf-predictor/scripts/predict_event.py"
+      ],
+      "_slug": "tf-model-intervals",
+      "notes": "Implemented prediction intervals (p10, p30, p50, p70, p90) in project_mark() function. The intervals are computed using:\n- std_dev from all_vals (existing variance field)\n- data_uncertainty = 1.0 / sq"
+    },
+    {
+      "id": "US-002",
+      "title": "Add prediction intervals to generate_report.py output",
+      "description": "Current state: generate_report.py at businesses/data-services/tf-predictor/scripts/generate_report.py renders prediction reports as Markdown tables with columns: Rank, Athlete, School, Yr, Predicted, Conf, (and Actual + delta in validation mode). It reads prediction JSON files from data/tf-predictor/predictions/.\n\nThe prediction JSON files now contain p30, p50, p70, p10, p90 keys from the updated predict_event.py.\n\nWhat to build:\n1. In build_report(), add a 'Range' column after the 'Conf' column in the table.\n   The Range column shows the P30-P70 interval formatted as:\n   - For TJ/LJ: '12.1-12.7m'\n   - For HJ: '1.70-1.82m'\n   Use format_mark() for consistent formatting.\n\n2. Only show the Range column if the prediction data actually contains 'p30' and 'p70' keys (backward compatible with old prediction files that lack intervals).\n\n3. In the Methodology section at the bottom, add a line:\n   '- **Prediction intervals** -- P30-P70 range shows the likely outcome window (70% of results expected within this band)'\n\nConstraints:\n- Do NOT modify predict_event.py, db.py, or score_meet.py\n- Do NOT change the table structure if prediction data lacks interval keys (backward compat)\n- Table alignment must still be valid Markdown",
+      "acceptanceCriteria": [
+        "python3 -m py_compile businesses/data-services/tf-predictor/scripts/generate_report.py",
+        "grep -q 'Range' businesses/data-services/tf-predictor/scripts/generate_report.py",
+        "grep -q 'Prediction intervals' businesses/data-services/tf-predictor/scripts/generate_report.py"
+      ],
+      "qualityChecks": [
+        "python3 -m py_compile businesses/data-services/tf-predictor/scripts/generate_report.py"
+      ],
+      "priority": 2,
+      "passes": true,
+      "attempts": 0,
+      "dependsOn": [
+        "US-001"
+      ],
+      "dependencyPolicy": "block",
+      "contextFiles": [
+        "businesses/data-services/tf-predictor/scripts/generate_report.py",
+        "businesses/data-services/tf-predictor/scripts/predict_event.py"
+      ],
+      "_slug": "tf-model-intervals",
+      "notes": "Implemented US-002: Added prediction intervals to generate_report.py output. Changes:\n1. Added Range column after Conf column in tables, showing P30-P70 interval formatted as '12.1-12.7m' or '1.70-1.8"
+    }
+  ]
+}

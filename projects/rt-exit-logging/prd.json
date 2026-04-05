@@ -1,0 +1,29 @@
+{
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Add trade logging to range_exit_monitor.py before removing positions",
+      "description": "Current state: range_exit_monitor.py at businesses/horizen-zkverify/range-trader/scripts/range_exit_monitor.py calls remove_position(symbol) after a successful sell. This deletes the position from range_positions.json. But it does NOT write the closed trade to range_trade_log.jsonl. The only record is the Telegram message \u2014 if Telegram fails, the trade history is lost.\n\nThe pipeline (run_range_pipeline.py) DOES write trade logs for BUY events via write_trade_log(). But SELLs from the exit monitor are not logged.\n\nWhat to fix:\n1. In check_positions(), BEFORE calling remove_position(symbol), write a complete trade record to range_trade_log.jsonl:\n\n   import json\n   from datetime import datetime, timezone\n   from pathlib import Path\n   TRADE_LOG = Path(__file__).parent.parent / 'data' / 'range_trade_log.jsonl'\n\n   trade_record = {\n       'action': 'SELL',\n       'symbol': symbol,\n       'address': address,\n       'entry_price': entry_price,\n       'exit_price': price,\n       'entry_usdc': pos.get('entry_usdc', 0),\n       'pnl_pct': round(pnl_pct, 2),\n       'pnl_usd': round(pos.get('entry_usdc', 0) * pnl_pct / 100, 2),\n       'reason': reason,\n       'hold_hours': round((datetime.now(timezone.utc) - datetime.fromisoformat(pos.get('entry_ts', datetime.now(timezone.utc).isoformat()))).total_seconds() / 3600, 1),\n       'tx_hash': result.get('tx_hash', ''),\n       'tokens_sold': pos.get('tokens_held', 0),\n       'ts': datetime.now(timezone.utc).isoformat(),\n   }\n   with open(TRADE_LOG, 'a') as f:\n       f.write(json.dumps(trade_record) + '\\n')\n\n2. Write this BEFORE remove_position() so that if the file write fails, the position isn't deleted.\n\n3. Also add the trade record to the Telegram message for completeness.\n\nConstraints:\n- Do NOT modify range_positions.py, range_execute.py, or run_range_pipeline.py\n- The trade log path must match what run_range_pipeline.py uses (data/range_trade_log.jsonl)\n- Handle missing pos fields gracefully (entry_usdc, entry_ts, tokens_held may not exist in older positions)",
+      "acceptanceCriteria": [
+        "python3 -m py_compile businesses/horizen-zkverify/range-trader/scripts/range_exit_monitor.py",
+        "grep -q 'range_trade_log' businesses/horizen-zkverify/range-trader/scripts/range_exit_monitor.py",
+        "grep -q 'pnl_usd' businesses/horizen-zkverify/range-trader/scripts/range_exit_monitor.py",
+        "grep -q 'hold_hours' businesses/horizen-zkverify/range-trader/scripts/range_exit_monitor.py"
+      ],
+      "qualityChecks": [
+        "python3 -m py_compile businesses/horizen-zkverify/range-trader/scripts/range_exit_monitor.py"
+      ],
+      "priority": 1,
+      "passes": true,
+      "attempts": 0,
+      "dependsOn": [],
+      "dependencyPolicy": "block",
+      "contextFiles": [
+        "businesses/horizen-zkverify/range-trader/scripts/range_exit_monitor.py",
+        "businesses/horizen-zkverify/range-trader/scripts/range_positions.py"
+      ],
+      "_slug": "rt-exit-logging",
+      "notes": "Implemented trade logging in range_exit_monitor.py by:\n1. Added TRADE_LOG path constant pointing to data/range_trade_log.jsonl\n2. Created trade_record dict with all required fields (action, symbol, ad"
+    }
+  ]
+}

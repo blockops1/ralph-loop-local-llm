@@ -1,0 +1,103 @@
+{
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "credit_tracker.py -- per-run credit logging",
+      "description": "Current state: no credit tracking exists. run_pipeline.py burns Nansen credits with no visibility into how many per run or per day.\n\nWhat to build: NEW file scripts/credit_tracker.py. This module provides two functions used by run_pipeline.py:\n\n1. get_credits_remaining() -> int\n   - Calls GET https://api.nansen.ai/api/v1/account with header apikey: NANSEN_API_KEY\n   - Returns credits_remaining from the JSON response (field already confirmed: {'plan': 'pro', 'credits_remaining': N})\n   - On any error (network, 403, etc.), returns -1\n\n2. log_credit_usage(run_id: str, credits_before: int, credits_after: int) -> None\n   - Appends one line to data/credit_log.jsonl\n   - Line format: {\"ts\": \"<UTC ISO>\", \"run_id\": \"<run_id>\", \"credits_before\": N, \"credits_after\": N, \"credits_used\": N}\n   - If either value is -1 (API error), skips the log write\n   - Creates data/ directory if it does not exist\n\nConstraints:\n- File lives at: businesses/horizen-zkverify/base-trader/scripts/credit_tracker.py\n- Uses standard library only: os, json, datetime, pathlib, urllib.request (no requests library)\n- NANSEN_API_KEY loaded from os.environ['NANSEN_API_KEY']\n- DATA_DIR = Path(__file__).parent.parent / 'data'",
+      "acceptanceCriteria": [
+        "python3 -m py_compile businesses/horizen-zkverify/base-trader/scripts/credit_tracker.py",
+        "python3 -c \"import sys; sys.path.insert(0,'businesses/horizen-zkverify/base-trader/scripts'); from credit_tracker import get_credits_remaining, log_credit_usage; print('imports OK')\"",
+        "grep -q 'def get_credits_remaining' businesses/horizen-zkverify/base-trader/scripts/credit_tracker.py",
+        "grep -q 'def log_credit_usage' businesses/horizen-zkverify/base-trader/scripts/credit_tracker.py",
+        "grep -q 'credit_log.jsonl' businesses/horizen-zkverify/base-trader/scripts/credit_tracker.py"
+      ],
+      "qualityChecks": "python3 -m py_compile businesses/horizen-zkverify/base-trader/scripts/credit_tracker.py",
+      "priority": 1,
+      "passes": true,
+      "attempts": 0,
+      "dependsOn": [],
+      "dependencyPolicy": "block",
+      "contextFiles": [],
+      "_slug": "base-trader-credit-mgmt",
+      "lastAttempt": "2026-03-15T21:52:22.538135+00:00",
+      "error": "Quality checks failed",
+      "notes": "Implemented US-001: Created scripts/credit_tracker.py with two functions - get_credits_remaining() calls Nansen API and returns credits_remaining or -1 on error, and log_credit_usage() appends JSONL e"
+    },
+    {
+      "id": "US-002",
+      "title": "run_pipeline.py -- wrap run with credit before/after calls",
+      "description": "Current state: run_pipeline.py exists at businesses/horizen-zkverify/base-trader/scripts/run_pipeline.py. It has no credit tracking. It has a main() function and a run_id variable set near the top of main().\n\nWhat to change: add credit tracking around the pipeline run.\n\n1. Add import at top of file (after existing imports):\n   from credit_tracker import get_credits_remaining, log_credit_usage\n\n2. Near the start of main(), after run_id is set, add:\n   credits_before = get_credits_remaining()\n\n3. Near the end of main(), before the final summary print, add:\n   credits_after = get_credits_remaining()\n   log_credit_usage(run_id, credits_before, credits_after)\n   if credits_after >= 0:\n       print(f'[CREDITS] {credits_before - credits_after} used this run. {credits_after} remaining.')\n\nDo NOT change any other logic in run_pipeline.py. Only add these three blocks.\n\nConstraints:\n- File: businesses/horizen-zkverify/base-trader/scripts/run_pipeline.py\n- Do not modify the scoring, discovery, or trade logic",
+      "acceptanceCriteria": [
+        "python3 -m py_compile businesses/horizen-zkverify/base-trader/scripts/run_pipeline.py",
+        "grep -q 'from credit_tracker import' businesses/horizen-zkverify/base-trader/scripts/run_pipeline.py",
+        "grep -q 'credits_before = get_credits_remaining' businesses/horizen-zkverify/base-trader/scripts/run_pipeline.py",
+        "grep -q 'log_credit_usage(run_id' businesses/horizen-zkverify/base-trader/scripts/run_pipeline.py"
+      ],
+      "qualityChecks": "python3 -m py_compile businesses/horizen-zkverify/base-trader/scripts/run_pipeline.py",
+      "priority": 2,
+      "passes": true,
+      "attempts": 0,
+      "dependsOn": [
+        "US-001"
+      ],
+      "dependencyPolicy": "block",
+      "contextFiles": [
+        "businesses/horizen-zkverify/base-trader/scripts/run_pipeline.py",
+        "businesses/horizen-zkverify/base-trader/scripts/credit_tracker.py"
+      ],
+      "_slug": "base-trader-credit-mgmt",
+      "notes": "Implemented US-002: Added credit tracking to run_pipeline.py by importing get_credits_remaining and log_credit_usage from credit_tracker, calling get_credits_remaining() after run_id generation, and c"
+    },
+    {
+      "id": "US-003",
+      "title": "credit_tracker.py -- daily budget gate in run_pipeline.py",
+      "description": "Current state: credit_tracker.py exists with get_credits_remaining() and log_credit_usage(). run_pipeline.py calls both. No daily budget enforcement exists.\n\nWhat to add to credit_tracker.py: a third function:\n\ncheck_daily_budget(monthly_allowance: int = 10000) -> tuple[bool, str]:\n  - Reads all lines from data/credit_log.jsonl\n  - Sums credits_used for all entries where ts is today (UTC date matches)\n  - daily_budget = (monthly_allowance * 0.40) / 30  (= 133 credits/day for 10k/month -- 60% reserved for exits, position checks, manual trades)\n  - If today_used >= daily_budget:\n      return False, f'Daily budget exceeded: {today_used:.0f} used today, budget={daily_budget:.0f}'\n  - Otherwise:\n      return True, f'Budget OK: {today_used:.0f}/{daily_budget:.0f} used today'\n  - If credit_log.jsonl does not exist: return True, 'No log yet -- budget OK'\n  - If a log line has credits_used field missing or negative: skip that line\n\nWhat to add to run_pipeline.py: budget gate at start of main(), before credits_before call:\n  ok, msg = check_daily_budget()\n  print(f'[CREDITS] {msg}')\n  if not ok:\n      print('[PIPELINE] Daily credit budget exceeded -- skipping run.')\n      return\n\nImport check_daily_budget in the existing credit_tracker import line.\n\nConstraints:\n- Modify only credit_tracker.py and run_pipeline.py\n- Do not change any other logic",
+      "acceptanceCriteria": [
+        "python3 -m py_compile businesses/horizen-zkverify/base-trader/scripts/credit_tracker.py",
+        "python3 -m py_compile businesses/horizen-zkverify/base-trader/scripts/run_pipeline.py",
+        "grep -q 'def check_daily_budget' businesses/horizen-zkverify/base-trader/scripts/credit_tracker.py",
+        "grep -q 'check_daily_budget' businesses/horizen-zkverify/base-trader/scripts/run_pipeline.py",
+        "python3 -c \"import sys; sys.path.insert(0,'businesses/horizen-zkverify/base-trader/scripts'); from credit_tracker import check_daily_budget; ok, msg = check_daily_budget(10000); print(ok, msg); assert ok == True\""
+      ],
+      "qualityChecks": "python3 -m py_compile businesses/horizen-zkverify/base-trader/scripts/credit_tracker.py && python3 -m py_compile businesses/horizen-zkverify/base-trader/scripts/run_pipeline.py",
+      "priority": 3,
+      "passes": true,
+      "attempts": 0,
+      "dependsOn": [
+        "US-002"
+      ],
+      "dependencyPolicy": "block",
+      "contextFiles": [
+        "businesses/horizen-zkverify/base-trader/scripts/credit_tracker.py",
+        "businesses/horizen-zkverify/base-trader/scripts/run_pipeline.py"
+      ],
+      "_slug": "base-trader-credit-mgmt",
+      "notes": "Implemented US-003: Added check_daily_budget() function to credit_tracker.py that reads data/credit_log.jsonl, sums credits_used for today's entries (skipping malformed/negative entries), and compares"
+    },
+    {
+      "id": "US-004",
+      "title": "daily_summary.py -- add credit burn section",
+      "description": "Current state: daily_summary.py exists at businesses/horizen-zkverify/base-trader/scripts/daily_summary.py. It generates a markdown summary report. It does NOT include any credit usage data.\n\nWhat to add: a credit burn section to the report.\n\n1. Add a new function get_credit_summary(data_dir: Path) -> dict:\n   - Reads data/credit_log.jsonl (same data_dir as rest of script)\n   - Returns:\n     {\n       'today_used': int,       # credits used today (UTC)\n       'yesterday_used': int,   # credits used yesterday (UTC)\n       'monthly_used': int,     # credits used this calendar month\n       'monthly_budget': 4000,  # 40% of 10000 -- 60% reserved for exits/trades\n       'budget_pct': float,     # monthly_used / 4000 * 100\n       'avg_per_run': float,    # monthly_used / total runs this month (0 if no runs)\n     }\n   - If file does not exist or is empty: return all zeros\n\n2. In generate_report(), after the existing sections, add a Credits section to the markdown output:\n   ## Credits\n   - Today: {today_used} used\n   - Yesterday: {yesterday_used} used\n   - This month: {monthly_used} / 4,000 budget ({budget_pct:.1f}%)\n   - Avg per run: {avg_per_run:.1f}\n\nConstraints:\n- File: businesses/horizen-zkverify/base-trader/scripts/daily_summary.py\n- Do not change any other section of the report or any other function\n- data_dir is already defined in the script as DATA_DIR = Path('data') -- use the same pattern",
+      "acceptanceCriteria": [
+        "python3 -m py_compile businesses/horizen-zkverify/base-trader/scripts/daily_summary.py",
+        "grep -q 'def get_credit_summary' businesses/horizen-zkverify/base-trader/scripts/daily_summary.py",
+        "grep -q 'monthly_budget' businesses/horizen-zkverify/base-trader/scripts/daily_summary.py",
+        "grep -q '## Credits' businesses/horizen-zkverify/base-trader/scripts/daily_summary.py"
+      ],
+      "qualityChecks": "python3 -m py_compile businesses/horizen-zkverify/base-trader/scripts/daily_summary.py",
+      "priority": 4,
+      "passes": true,
+      "attempts": 0,
+      "dependsOn": [
+        "US-001"
+      ],
+      "dependencyPolicy": "block",
+      "contextFiles": [
+        "businesses/horizen-zkverify/base-trader/scripts/daily_summary.py",
+        "businesses/horizen-zkverify/base-trader/scripts/credit_tracker.py"
+      ],
+      "_slug": "base-trader-credit-mgmt",
+      "notes": "Implemented US-004: Added `get_credit_summary()` function to daily_summary.py that reads credit_log.jsonl and returns usage stats (today/yesterday/monthly credits, budget percentage, avg per run). Add"
+    }
+  ]
+}

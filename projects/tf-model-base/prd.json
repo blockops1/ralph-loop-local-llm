@@ -1,0 +1,28 @@
+{
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Replace best_mark() with robust_base_mark() using weighted P85",
+      "description": "Current state: predict_event.py at businesses/data-services/tf-predictor/scripts/predict_event.py has a best_mark() function that returns max(recent_marks) within the last N days. This is used in project_mark() as the L1 base. The problem is that a single outlier (wind-aided, perfect conditions) anchors the entire prediction.\n\nWhat to build:\n1. Add a new function robust_base_mark(marks, days=365, percentile=85) that:\n   - Filters marks to those within the last `days` days (same as best_mark)\n   - Falls back to all marks if none are recent (same as best_mark)\n   - Applies phase weights from each mark's 'weight' field\n   - Computes the weighted percentile (default P85) using numpy\n   - Implementation: sort marks by mark_metric, compute cumulative weight, find the mark at the 85th percentile of cumulative weight\n   - Returns a single float (the robust base mark)\n   - If only 1-2 marks exist, return the max (not enough data for percentile)\n\n2. In project_mark(), replace the line:\n     base = best_mark(marks, days=365)\n   with:\n     base = robust_base_mark(marks, days=365, percentile=85)\n\n3. Keep the old best_mark() function in place (do not delete it) -- it may be used elsewhere or for comparison.\n\n4. Add 'robust_base' to the returned dict from project_mark() alongside the existing 'base_mark' key. Set base_mark to the new robust value.\n\nConstraints:\n- Do NOT modify db.py, generate_report.py, or score_meet.py\n- Do NOT change the return dict shape of project_mark() -- only add the new key\n- The function must handle the case where all marks have weight=1.0 (default)\n- numpy is already imported in the file",
+      "acceptanceCriteria": [
+        "python3 -m py_compile businesses/data-services/tf-predictor/scripts/predict_event.py",
+        "python3 -c \"import sys; sys.path.insert(0,'businesses/data-services/tf-predictor/scripts'); from predict_event import robust_base_mark; marks = [{'mark_metric': 12.0, 'date_parsed': __import__('datetime').date(2025,6,1), 'weight': 1.5}, {'mark_metric': 12.5, 'date_parsed': __import__('datetime').date(2025,6,15), 'weight': 1.5}, {'mark_metric': 13.5, 'date_parsed': __import__('datetime').date(2025,7,1), 'weight': 1.0}, {'mark_metric': 12.3, 'date_parsed': __import__('datetime').date(2025,5,1), 'weight': 0.8}]; result = robust_base_mark(marks, days=365); assert 12.0 < result < 13.5, f'got {result}'; print(f'robust_base_mark={result} PASS')\"",
+        "python3 -c \"import sys; sys.path.insert(0,'businesses/data-services/tf-predictor/scripts'); from predict_event import robust_base_mark; single = [{'mark_metric': 12.0, 'date_parsed': __import__('datetime').date(2025,6,1), 'weight': 1.0}]; assert robust_base_mark(single) == 12.0; print('single mark PASS')\""
+      ],
+      "qualityChecks": [
+        "python3 -m py_compile businesses/data-services/tf-predictor/scripts/predict_event.py"
+      ],
+      "priority": 1,
+      "passes": true,
+      "attempts": 3,
+      "dependsOn": [],
+      "dependencyPolicy": "block",
+      "contextFiles": [
+        "businesses/data-services/tf-predictor/scripts/predict_event.py"
+      ],
+      "_slug": "tf-model-base",
+      "lastAttempt": "2026-03-17T18:53:34.438205+00:00",
+      "error": null
+    }
+  ]
+}

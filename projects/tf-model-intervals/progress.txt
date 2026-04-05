@@ -1,0 +1,17 @@
+# Ralph Progress Log — tf-model-intervals
+Started: 2026-03-17T16:28:56.949320
+---
+
+## [2026-03-17 16:34]
+✅ US-001: Add prediction intervals (P30/P50/P70) to project_mark() output
+Implemented prediction intervals (p10, p30, p50, p70, p90) in project_mark() function. The intervals are computed using:
+- std_dev from all_vals (existing variance field)
+- data_uncertainty = 1.0 / sqrt(len(marks))
+- total_uncertainty = std_dev * (1.0 + data_uncertainty)
+- p50 = predicted (central e
+
+## [2026-03-17 16:36]
+✅ US-002: Add prediction intervals to generate_report.py output
+Implemented US-002: Added prediction intervals to generate_report.py output. Changes:
+1. Added Range column after Conf column in tables, showing P30-P70 interval formatted as '12.1-12.7m' or '1.70-1.82m'
+2. Range column only appears when prediction data contains 'p30' and 'p70' keys (backward compat

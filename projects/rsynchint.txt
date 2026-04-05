@@ -1,0 +1,5 @@
+rsync -avzHE --progress \
+  --exclude="._*" --exclude=".DS_Store" --exclude="Thumbs.db" \
+  --partial --stats \
+  rolf@192.168.5.120:/Users/rolf/SomeBigFolder/ \
+  /Users/rolf/Desktop/SomeBigFolder-copy/

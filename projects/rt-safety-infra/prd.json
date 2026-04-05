@@ -1,0 +1,59 @@
+{
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Create range_reconcile.py \u2014 on-chain balance reconciliation for range trader",
+      "description": "Port the reconciliation pattern from businesses/horizen-zkverify/base-trader/scripts/reconcile.py, adapted for the Range Trader:\n\n1. Create businesses/horizen-zkverify/range-trader/scripts/range_reconcile.py\n2. Read range_positions.json from data/\n3. For each open position:\n   - Query on-chain token balance via web3 balanceOf using METAMASK_WALLET_ADDRESS\n   - If balance == 0, mark position as removed and log to data/range_reconcile_log.jsonl\n   - If balance > 0, update tokens_held in the position\n4. Rewrite range_positions.json if any changes\n5. Use same Base RPC and ERC20 ABI as range_execute.py\n\nAlso wire into run_range_pipeline.py:\n- Import reconcile from range_reconcile\n- Call it at pipeline start, before scanning (same pattern as base-trader)\n- Non-fatal: if reconcile fails, log warning and continue\n\nConstraints:\n- Use METAMASK_WALLET_ADDRESS from env (not BASE_WALLET_ADDRESS)\n- Use range_positions.json (not positions.json)\n- Log to range_reconcile_log.jsonl (separate from base-trader logs)\n- Can import get_web3 from range_execute.py or define own",
+      "acceptanceCriteria": [
+        "python3 -m py_compile businesses/horizen-zkverify/range-trader/scripts/range_reconcile.py",
+        "grep -q 'METAMASK_WALLET_ADDRESS' businesses/horizen-zkverify/range-trader/scripts/range_reconcile.py",
+        "grep -q 'range_positions' businesses/horizen-zkverify/range-trader/scripts/range_reconcile.py",
+        "grep -q 'reconcile' businesses/horizen-zkverify/range-trader/scripts/run_range_pipeline.py"
+      ],
+      "qualityChecks": [
+        "python3 -m py_compile businesses/horizen-zkverify/range-trader/scripts/range_reconcile.py",
+        "python3 -m py_compile businesses/horizen-zkverify/range-trader/scripts/run_range_pipeline.py"
+      ],
+      "priority": 1,
+      "passes": true,
+      "attempts": 0,
+      "dependsOn": [],
+      "dependencyPolicy": "block",
+      "contextFiles": [
+        "businesses/horizen-zkverify/base-trader/scripts/reconcile.py",
+        "businesses/horizen-zkverify/range-trader/scripts/run_range_pipeline.py",
+        "businesses/horizen-zkverify/range-trader/scripts/range_positions.py"
+      ],
+      "_slug": "rt-safety-infra",
+      "notes": "Implemented US-001: Created range_reconcile.py that reads range_positions.json, checks on-chain token balances via web3 balanceOf using METAMASK_WALLET_ADDRESS, marks positions with zero balance as 'r"
+    },
+    {
+      "id": "US-002",
+      "title": "Create range_verifier.py \u2014 post-trade position verification for range trader",
+      "description": "Port the verification pattern from businesses/horizen-zkverify/base-trader/scripts/verifier.py, adapted for Range Trader:\n\n1. Create businesses/horizen-zkverify/range-trader/scripts/range_verifier.py\n2. For each position in range_positions.json:\n   - Query on-chain token balance via web3 using METAMASK_WALLET_ADDRESS\n   - Get current price from GeckoTerminal (import get_price from range_scanner)\n   - Compute current_usd = token_balance * price_usd\n   - Compare with entry_usdc from position, compute discrepancy_pct\n   - Check if price is at/below stop_loss\n   - Log result to data/range_verifier_log.jsonl\n   - On FAIL: send Telegram alert\n3. Return exit code 0 (all pass) or 1 (any fail)\n\nAlso wire into run_range_pipeline.py:\n- At end of pipeline (after all trading), run verifier\n- Log verifier output\n\nConstraints:\n- Use METAMASK_WALLET_ADDRESS from env\n- Get prices from GeckoTerminal (import from range_scanner), NOT Nansen\n- Separate log file from base-trader (range_verifier_log.jsonl)\n- PASS if: discrepancy_pct < 25% AND token_balance > 0 (wider threshold than base-trader's 20% because small-cap tokens are more volatile)",
+      "acceptanceCriteria": [
+        "python3 -m py_compile businesses/horizen-zkverify/range-trader/scripts/range_verifier.py",
+        "grep -q 'range_verifier_log' businesses/horizen-zkverify/range-trader/scripts/range_verifier.py",
+        "grep -q 'METAMASK_WALLET_ADDRESS' businesses/horizen-zkverify/range-trader/scripts/range_verifier.py",
+        "python3 businesses/horizen-zkverify/range-trader/scripts/range_verifier.py --help 2>&1 | grep -qi 'usage\\|verif'"
+      ],
+      "qualityChecks": [
+        "python3 -m py_compile businesses/horizen-zkverify/range-trader/scripts/range_verifier.py"
+      ],
+      "priority": 2,
+      "passes": true,
+      "attempts": 0,
+      "dependsOn": [
+        "US-001"
+      ],
+      "dependencyPolicy": "block",
+      "contextFiles": [
+        "businesses/horizen-zkverify/base-trader/scripts/verifier.py",
+        "businesses/horizen-zkverify/range-trader/scripts/range_scanner.py",
+        "businesses/horizen-zkverify/range-trader/scripts/range_execute.py"
+      ],
+      "_slug": "rt-safety-infra",
+      "notes": "Created businesses/horizen-zkverify/range-trader/scripts/range_verifier.py - a post-trade position verification script for Range Trader. Key features:\n\n1. Reads positions from data/range_positions.jso"
+    }
+  ]
+}

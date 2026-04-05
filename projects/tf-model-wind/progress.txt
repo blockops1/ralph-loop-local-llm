@@ -1,0 +1,15 @@
+# Ralph Progress Log — tf-model-wind
+Started: 2026-03-17T13:17:47.734656
+---
+
+## [2026-03-17 13:29]
+✅ US-001: Extract wind data from TFRRS athlete profile pages in tfrrs_crossref.py pull_marks()
+Implemented wind data extraction in tfrrs_crossref.py pull_marks() function. Added logic to parse TFRRS athlete profile pages and extract wind values from <span> elements within table cells. Wind format (+N.N) or (-N.N) is matched via regex, with None for indoor marks lacking wind spans. The 'wind'
+
+## [2026-03-17 13:34]
+✅ US-002: Update db.py upsert_performances() to accept explicit wind value from scraper
+Implemented US-002: Modified `upsert_performances()` in db.py to prefer explicit 'wind' key from scraper records, with fallback to `_parse_wind(rec.get('mark_raw', ''))` for backward compatibility. The change was a 2-line modification in the loop that processes performance records. Both acceptance c
+
+## [2026-03-17 13:40]
+✅ US-003: Add wind correction constants and normalize_wind_mark() to predict_event.py
+Implemented US-003: Added WIND_CORRECTION_FACTOR dict (triple-jump: 0.15, long-jump: 0.10) and normalize_wind_mark() function to predict_event.py. Modified load_marks() to compute mark_wind_corrected for each mark. Updated project_mark() to use mark_wind_corrected for all_vals computation and best_m

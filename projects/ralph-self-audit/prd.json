@@ -1,0 +1,126 @@
+{
+  "userStories": [
+    {
+      "id": "REV-A",
+      "title": "Review ralph.py (848 lines) for line-level bugs",
+      "description": "Current state: ralph.py is the main Ralph autonomous loop engine (848 lines). Read code/ralph.py thoroughly.\n\nTask: Append a bug report to ralph/projects/ralph-self-audit/review.md covering: off-by-one errors, missing None checks, logic errors, error handling gaps, race conditions, hardcoded values, anything that crashes or produces wrong output.\n\nFormat: ralph.py:{line} - [BUG] description\n\nCommit: git -C ralph add review.md && git -C ralph commit -m review-ralph-py-audit",
+      "type": "review",
+      "contextFiles": [],
+      "acceptanceCriteria": [
+        "test -f ralph/projects/ralph-self-audit/review.md",
+        "grep -q 'ralph.py:' ralph/projects/ralph-self-audit/review.md",
+        "git -C ralph rev-parse HEAD"
+      ],
+      "qualityChecks": [
+        "grep -c 'ralph.py:' ralph/projects/ralph-self-audit/review.md"
+      ],
+      "priority": 1,
+      "passes": false,
+      "attempts": 0,
+      "dependsOn": [],
+      "dependencyPolicy": "block",
+      "_slug": "ralph-self-audit",
+      "lastAttempt": "2026-03-28T02:40:29.730044+00:00"
+    },
+    {
+      "id": "REV-B",
+      "title": "Review tools.py (456 lines) for line-level bugs",
+      "description": "Current state: tools.py defines all tools Ralph can call - read_file, write_file, exec, etc. (456 lines). Read code/tools.py thoroughly.\n\nTask: Append a bug report to ralph/projects/ralph-self-audit/review.md covering: off-by-one errors, missing None checks, logic errors, error handling gaps, path traversal issues, file handle leaks, anything that crashes or produces wrong output.\n\nFormat: tools.py:{line} - [BUG] description\n\nCommit: git -C ralph add review.md && git -C ralph commit -m review-tools-py-audit",
+      "type": "review",
+      "contextFiles": [],
+      "acceptanceCriteria": [
+        "test -f ralph/projects/ralph-self-audit/review.md",
+        "grep -q 'tools.py:' ralph/projects/ralph-self-audit/review.md",
+        "git -C ralph rev-parse HEAD"
+      ],
+      "qualityChecks": [
+        "grep -c 'tools.py:' ralph/projects/ralph-self-audit/review.md"
+      ],
+      "priority": 2,
+      "passes": false,
+      "attempts": 0,
+      "dependsOn": [],
+      "dependencyPolicy": "block"
+    },
+    {
+      "id": "REV-C",
+      "title": "Review prd_manager.py (327 lines) for line-level bugs",
+      "description": "Current state: prd_manager.py handles PRD state machine - loads/saves prd.json, manages story status, next-story selection, dependency resolution (327 lines). Read code/prd_manager.py thoroughly.\n\nTask: Append a bug report to ralph/projects/ralph-self-audit/review.md covering: off-by-one errors, missing None checks, logic errors, error handling gaps, dependency resolution bugs, JSON state corruption risks, anything that crashes or produces wrong output.\n\nFormat: prd_manager.py:{line} - [BUG] description\n\nCommit: git -C ralph add review.md && git -C ralph commit -m review-prd-manager-audit",
+      "type": "review",
+      "contextFiles": [],
+      "acceptanceCriteria": [
+        "test -f ralph/projects/ralph-self-audit/review.md",
+        "grep -q 'prd_manager.py:' ralph/projects/ralph-self-audit/review.md",
+        "git -C ralph rev-parse HEAD"
+      ],
+      "qualityChecks": [
+        "grep -c 'prd_manager.py:' ralph/projects/ralph-self-audit/review.md"
+      ],
+      "priority": 3,
+      "passes": false,
+      "attempts": 0,
+      "dependsOn": [],
+      "dependencyPolicy": "block"
+    },
+    {
+      "id": "REV-D",
+      "title": "Review ralph.sh (211 lines) for line-level bugs",
+      "description": "Current state: ralph.sh is the Bash launch script - parses args, sets up environment, calls llama-server, invokes ralph.py (211 lines). Read code/ralph.sh thoroughly.\n\nTask: Append a bug report to ralph/projects/ralph-self-audit/review.md covering: ShellCheck warnings, missing error propagation, path quoting issues, trap/inherited state issues, race conditions in lock file handling, port already-in-use handling, anything that causes failure or wrong behavior.\n\nFormat: ralph.sh:{line} - [BUG] description\n\nCommit: git -C ralph add review.md && git -C ralph commit -m review-ralph-sh-audit",
+      "type": "review",
+      "contextFiles": [],
+      "acceptanceCriteria": [
+        "test -f ralph/projects/ralph-self-audit/review.md",
+        "grep -q 'ralph.sh:' ralph/projects/ralph-self-audit/review.md",
+        "git -C ralph rev-parse HEAD"
+      ],
+      "qualityChecks": [
+        "grep -c 'ralph.sh:' ralph/projects/ralph-self-audit/review.md"
+      ],
+      "priority": 4,
+      "passes": false,
+      "attempts": 0,
+      "dependsOn": [],
+      "dependencyPolicy": "block"
+    },
+    {
+      "id": "REV-E",
+      "title": "Review prd_linter.py (135 lines) for line-level bugs",
+      "description": "Current state: prd_linter.py validates prd.json structure - checks required fields, schema compliance, story ordering (135 lines). Read code/prd_linter.py thoroughly.\n\nTask: Append a bug report to ralph/projects/ralph-self-audit/review.md covering: off-by-one errors, missing None checks, logic errors, error handling gaps, schema validation gaps, anything that crashes or produces wrong output.\n\nFormat: prd_linter.py:{line} - [BUG] description\n\nCommit: git -C ralph add review.md && git -C ralph commit -m review-prd-linter-audit",
+      "type": "review",
+      "contextFiles": [],
+      "acceptanceCriteria": [
+        "test -f ralph/projects/ralph-self-audit/review.md",
+        "grep -q 'prd_linter.py:' ralph/projects/ralph-self-audit/review.md",
+        "git -C ralph rev-parse HEAD"
+      ],
+      "qualityChecks": [
+        "grep -c 'prd_linter.py:' ralph/projects/ralph-self-audit/review.md"
+      ],
+      "priority": 5,
+      "passes": false,
+      "attempts": 0,
+      "dependsOn": [],
+      "dependencyPolicy": "block"
+    },
+    {
+      "id": "REV-F",
+      "title": "Review loop_runner.py (84 lines) for line-level bugs",
+      "description": "Current state: loop_runner.py handles sequential multi-story PRD execution - chains story runs (84 lines). Read code/loop_runner.py thoroughly.\n\nTask: Append a bug report to ralph/projects/ralph-self-audit/review.md covering: off-by-one errors, missing None checks, logic errors, error handling gaps, race conditions between story completions, anything that crashes or produces wrong output.\n\nFormat: loop_runner.py:{line} - [BUG] description\n\nCommit: git -C ralph add review.md && git -C ralph commit -m review-loop-runner-audit",
+      "type": "review",
+      "contextFiles": [],
+      "acceptanceCriteria": [
+        "test -f ralph/projects/ralph-self-audit/review.md",
+        "grep -q 'loop_runner.py:' ralph/projects/ralph-self-audit/review.md",
+        "git -C ralph rev-parse HEAD"
+      ],
+      "qualityChecks": [
+        "grep -c 'loop_runner.py:' ralph/projects/ralph-self-audit/review.md"
+      ],
+      "priority": 6,
+      "passes": false,
+      "attempts": 0,
+      "dependsOn": [],
+      "dependencyPolicy": "block"
+    }
+  ]
+}

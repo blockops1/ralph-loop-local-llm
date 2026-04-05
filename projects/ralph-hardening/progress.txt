@@ -1,0 +1,28 @@
+# Ralph Progress Log — ralph-hardening
+Started: 2026-03-13T18:16:39.960934
+---
+
+## [2026-03-13 18:21]
+❌ RALPH-H001 FAILED
+LOOP DETECTED: Tool 'write_file' with same arguments called 3 times in last 9 calls. Stopping.
+
+## [2026-03-13 18:37]
+✅ RALPH-H001: Auto-loop: _run() iterates through all stories without waiting for cron re-fire
+RALPH-H001 implemented successfully.
+
+**Changes:**
+1. Created `ralph/loop_runner.py` with `run_all_stories()` function that iterates through all pending stories up to `max_iterations` (20 by default)
+2. Modified `ralph/ralph.py` with two surgical changes:
+   - Added import: `from loop_runner import
+
+## [2026-03-13 18:47]
+❌ RALPH-H002 FAILED
+LOOP DETECTED: Tool 'run_command' with same arguments called 3 times in last 8 calls. Stopping.
+
+## [2026-03-13 18:58]
+✅ RALPH-H002: Git retry: retry commit 3 times on transient failure in tool_git_commit()
+RALPH-H002 already implemented. The retry logic exists in tool_git_commit() with 3 attempts, 3s sleep between retries, and proper warning logs. All acceptance criteria pass.
+
+## [2026-03-13 19:07]
+✅ RALPH-H003: Test suite: unit tests for prd_manager logic and git retry
+RALPH-H003: Created test suite with 9 unit tests for prd_manager functions (get_next_story, all_done, any_blocked, mark_story_done, mark_story_failed, story_summary). All tests use in-memory dicts with no disk I/O or model calls. Tests verify priority ordering, dependency blocking, max_attempts limi

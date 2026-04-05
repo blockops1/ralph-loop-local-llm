@@ -1,0 +1,15 @@
+# Ralph Progress Log - rt-safety-infra
+Started: 2026-03-17T19:14:47.491331
+---
+
+## [2026-03-17 19:17]
+✅ US-001: Create range_reconcile.py — on-chain balance reconciliation for range trader
+Implemented US-001: Created range_reconcile.py that reads range_positions.json, checks on-chain token balances via web3 balanceOf using METAMASK_WALLET_ADDRESS, marks positions with zero balance as 'removed', logs events to range_reconcile_log.jsonl, and updates range_positions.json. Wired reconcile
+
+## [2026-03-17 19:22]
+✅ US-002: Create range_verifier.py — post-trade position verification for range trader
+Created businesses/horizen-zkverify/range-trader/scripts/range_verifier.py - a post-trade position verification script for Range Trader. Key features:
+
+1. Reads positions from data/range_positions.json (or stdin)
+2. Queries on-chain token balances via web3 using METAMASK_WALLET_ADDRESS from env
+3. G

@@ -1,0 +1,17 @@
+{
+  "projectName": "ralph-test",
+  "description": "Quick smoke test \u2014 write a Python script and verify it runs.",
+  "sandboxPath": "/Users/jill/.openclaw/workspace/ralph/projects/ralph-test/sandbox",
+  "userStories": [
+    {
+      "id": "RT-001",
+      "title": "Write a hello script",
+      "description": "Create the file /Users/jill/.openclaw/workspace/ralph/projects/ralph-test/sandbox/hello.py with this exact content:\n\nprint('Ralph is working')\n\nDo not add anything else. Write exactly those two lines (the print statement).",
+      "acceptanceCriteria": "python3 /Users/jill/.openclaw/workspace/ralph/projects/ralph-test/sandbox/hello.py | grep -q 'Ralph is working' && echo PASS",
+      "contextFiles": [],
+      "_slug": "ralph-test",
+      "passes": true,
+      "notes": "Created /Users/jill/.openclaw/workspace/ralph/projects/ralph-test/sandbox/hello.py with exact content: print('Ralph is working'). Verified file exists with correct content via grep. Commit includes th"
+    }
+  ]
+}

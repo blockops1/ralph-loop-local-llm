@@ -1,0 +1,161 @@
+{
+  "project": "solana-v2-redesign",
+  "description": "Redesign Solana Trader v1 discovery pipeline. Replace Nansen-first discovery (98% of signals score 0) with free DexScreener discovery + selective Nansen enrichment. Goal: productive signals without burning credits on noise. Production system: live trading via launchd. Ralph writes to project copy; Mr. V reviews and deploys.",
+  "branch": "dev",
+  "contextFiles": [
+    "businesses/horizen-zkverify/solana-trader/scripts/scanner.py",
+    "businesses/horizen-zkverify/solana-trader/scripts/signal_filter.py",
+    "businesses/horizen-zkverify/solana-trader/scripts/run_pipeline.py",
+    "businesses/horizen-zkverify/solana-trader/config/config.yaml",
+    "businesses/horizen-zkverify/solana-trader/PROJ-solana-trader-live.md"
+  ],
+  "qualityChecks": [
+    "python3 -m py_compile {file}"
+  ],
+  "userStories": [
+    {
+      "id": "SV2-001",
+      "title": "Write PROJ-solana-v2-redesign.md - design document",
+      "description": "Current state: PROJ-solana-v2-redesign.md does not exist.\n\nWhat to build: Create PROJ-solana-v2-redesign.md in the project root (businesses/horizen-zkverify/) as the design + context document for this PRD. Include:\n\n1. Problem statement: v1 pipeline produces 98% zero-score signals; Nansen-first discovery finds tokens after SM accumulation, missing the early pump\n2. Design principle: 'Earn the expensive data' - free discovery first, Nansen only for tokens that look promising\n3. New architecture:\n   - Tier 1 (free): DexScreener /latest/dex/pairs/solana sorted by liquidity+volume+newest, cached 15 min\n   - Tier 2 (free): hard filters - 3-30 day age, $50K+ liquidity, $100K+ volume\n   - Tier 3 (optional): Nansen smart-money/netflow page cross-ref (5 cr, cached 4h)\n   - Tier 4: momentum-first scoring (no SM signal required to pass)\n4. Credit budget: ~30 cr/day (vs. v1 ~60 cr for noise)\n5. Config changes: min_token_age 30->3, min_liquidity 100K->50K, disable flow_intel\n\nConstraints:\n- Do NOT modify any .py files - this is a design doc only\n- Write to businesses/horizen-zkverify/PROJ-solana-v2-redesign.md",
+      "acceptanceCriteria": [
+        "test -f businesses/horizen-zkverify/PROJ-solana-v2-redesign.md",
+        "grep -q 'Earn the expensive data' businesses/horizen-zkverify/PROJ-solana-v2-redesign.md",
+        "grep -q 'Tier 1' businesses/horizen-zkverify/PROJ-solana-v2-redesign.md",
+        "grep -q '30 cr/day' businesses/horizen-zkverify/PROJ-solana-v2-redesign.md"
+      ],
+      "qualityChecks": "test -f businesses/horizen-zkverify/PROJ-solana-v2-redesign.md",
+      "priority": 1,
+      "passes": false,
+      "attempts": 0,
+      "dependsOn": [],
+      "dependencyPolicy": "block",
+      "contextFiles": []
+    },
+    {
+      "id": "SV2-002",
+      "title": "scanner.py - DexScreener-first token discovery",
+      "description": "Current state: load_candidate_tokens() in scanner.py (line ~123) uses Nansen smart-money/netflow as primary discovery source. It calls Nansen, then filters by age>=30 days. This misses new Solana tokens before SM accumulation.\n\nWhat to change: Replace the discovery logic in load_candidate_tokens() with DexScreener-first discovery.\n\nNew implementation:\n1. Check DISCOVERY_CACHE_FILE (path already exists: data/solana_discovery_cache.json). TTL already set to 14400 (4h) -- reduce to 900 (15 min). Change DISCOVERY_CACHE_TTL = 900.\n2. On cache miss: call DexScreener GET https://api.dexscreener.com/latest/dex/pairs/solana\n3. Parse response: for each pair extract baseToken.address, baseToken.symbol, quoteToken.symbol, liquidity.usd, volume.h24, marketCap, priceUsd, createdAt\n4. Filter:\n   - Skip if quoteToken.symbol != 'SOL' (only SOL pairs)\n   - Skip stablecoins (USDC/USDT/USDS/USD1/PYUSD/DAI/BUSD/TUSD by symbol)\n   - Skip if liquidity < 50000 USD\n   - Skip if marketCap < 50000 USD\n   - Skip if marketCap > 100000000 USD\n   - Skip if token age (from createdAt) < 3 days\n   - Skip if token age > 30 days\n   - Skip if volume.h24 < 100000 USD\n5. Sort by: liquidity DESC, then volume.h24 DESC\n6. Return up to 25 candidates as dicts with keys: symbol, address, chain='solana', liquidity_usd, market_cap_usd, price_usd, volume_24h_usd, token_age_days (computed from createdAt), dex_score (liquidity rank 0-1 normalized)\n7. Save to disk cache\n8. If DexScreener call fails, fall back to Nansen smart-money/netflow (keep existing Nansen path as fallback)\n\nKeep: get_flow_intelligence() unchanged. _headers() unchanged. get_sol_price_usd() unchanged. get_btc_5h_change() unchanged. DISCOVERY_CACHE_FILE path unchanged.\n\nConstraints:\n- Do NOT remove get_flow_intelligence() -- it is still used by run_pipeline.py\n- Do NOT change FLOW_CACHE_FILE or FLOW_CACHE_TTL\n- Use requests (already imported) -- do not add new dependencies\n- Sys.path.insert not needed -- scanner.py is run from scripts/ directory directly",
+      "acceptanceCriteria": [
+        "python3 -m py_compile businesses/horizen-zkverify/solana-trader/scripts/scanner.py",
+        "python3 -c \"import sys; sys.path.insert(0,'businesses/horizen-zkverify/solana-trader/scripts'); from scanner import load_candidate_tokens; print('imports OK')\""
+      ],
+      "qualityChecks": "python3 -m py_compile businesses/horizen-zkverify/solana-trader/scripts/scanner.py",
+      "priority": 2,
+      "passes": false,
+      "attempts": 0,
+      "dependsOn": [
+        "SV2-001"
+      ],
+      "dependencyPolicy": "block",
+      "contextFiles": [
+        "businesses/horizen-zkverify/solana-trader/scripts/scanner.py",
+        "businesses/horizen-zkverify/solana-trader/config/config.yaml"
+      ]
+    },
+    {
+      "id": "SV2-003",
+      "title": "scanner.py - Nansen netflow cross-ref function",
+      "description": "Current state: after SV2-002, scanner.py has DexScreener discovery. No Nansen cross-reference exists yet.\n\nWhat to build: Add a new function load_nansen_netflow_crossref() that fetches Nansen smart-money/netflow for Solana and cross-references with DexScreener candidates.\n\nNew function:\ndef load_nansen_netflow_crossref(top_n: int = 10) -> dict:\n    '''Fetch Nansen Solana netflow rankings and return as dict: address -> netflow_24h_usd.\n    Used to cross-reference DexScreener candidates against SM rankings.\n    Cached to disk at data/nansen_netflow_cache.json with TTL = 14400 (4h).\n    Returns {} if NANSEN_API_KEY not set or API fails.'''\n    - Check NANSEN_API_KEY -- if not set, return {}\n    - Check/cache pattern: data/nansen_netflow_cache.json, TTL = 14400\n    - On cache miss: POST to NANSEN_BASE/api/v1/smart-money/netflow\n      body: {'chains': ['solana'], 'filters': {'include_stablecoins': False, 'include_native_tokens': False}, 'pagination': {'page': 1, 'per_page': 50}, 'order_by': [{'field': 'net_flow_24h_usd', 'direction': 'DESC'}]}\n    - Parse response: return {token_address_lower: net_flow_24h_usd for each item}\n    - 5 credits per call\n    - Cost: ~30 cr/day (6 cache misses x 5 cr)\n\nAlso add to load_candidate_tokens() after DexScreener discovery:\n    - Call load_nansen_netflow_crossref() to get SM rankings\n    - For each candidate, attach nansen_netflow_usd = sm_rank.get(address_lower, 0)\n    - Add nansen_rank field: 0 if not in Nansen top 50, else rank position (1=best)\n\nConstraints:\n- Do NOT call Nansen more than once per cache refresh (share across candidates)\n- NANSEN_API_KEY check: if not in os.environ, skip Nansen entirely and continue with DexScreener-only candidates\n- Do NOT modify get_flow_intelligence()",
+      "acceptanceCriteria": [
+        "python3 -m py_compile businesses/horizen-zkverify/solana-trader/scripts/scanner.py",
+        "python3 -c \"import sys; sys.path.insert(0,'businesses/horizen-zkverify/solana-trader/scripts'); from scanner import load_nansen_netflow_crossref; print('function exists')\""
+      ],
+      "qualityChecks": "python3 -m py_compile businesses/horizen-zkverify/solana-trader/scripts/scanner.py",
+      "priority": 3,
+      "passes": false,
+      "attempts": 0,
+      "dependsOn": [
+        "SV2-002"
+      ],
+      "dependencyPolicy": "block",
+      "contextFiles": [
+        "businesses/horizen-zkverify/solana-trader/scripts/scanner.py"
+      ]
+    },
+    {
+      "id": "SV2-004",
+      "title": "signal_filter.py - momentum-first Solana scoring",
+      "description": "Current state: signal_filter.py has score_signal() using 4 pillars (SM Netflow 100pts, Flow Intel 100pts, Volume 100pts, Token Health 100pts). Hard disqualifier requires SM signal. On Solana v1, 98% of tokens score 0 because SM signal is absent.\n\nWhat to change: Create a new function score_signal_solana() with momentum-first weights.\n\nNew scoring function score_signal_solana(token, flow_intel, btc_change, config):\n  Input token dict now includes (from DexScreener): symbol, address, liquidity_usd, market_cap_usd, volume_24h_usd, token_age_days, dex_score, nansen_netflow_usd, nansen_rank\n\nPillars (total 400 pts):\n  P1 - Momentum (150 pts max): based on DexScreener data\n    - liquidity_score (50 pts): liquidity 50K->10M maps to 0-50 linearly\n    - volume_score (50 pts): volume 100K->10M maps to 0-50 linearly\n    - price_momentum (50 pts): if priceChange.h24 exists, 0-50 based on 0%->50% change\n  \n  P2 - SM Signal (100 pts max): from Nansen netflow crossref\n    - If nansen_netflow_usd > 0 and nansen_rank > 0: (1 - nansen_rank/50) * 100\n    - Else: 0 (no SM disqualifier -- SM is bonus, not requirement)\n  \n  P3 - Market Cap Fit (100 pts max):\n    - $1M-$10M: 100 pts (sweet spot for pumps)\n    - $10M-$50M: 70 pts\n    - $50M-$100M: 30 pts\n    - <$1M or >$100M: 0 pts\n  \n  P4 - Flow Intelligence (50 pts max): from get_flow_intelligence()\n    - If flow_intel available: min(50, smart_trader_wallet_count * 10)\n    - Else: 0\n\nHard disqualifiers (return score 0, passes=False):\n  - BTC 4h change < -3% (macro kill switch)\n  - liquidity_usd < 50000\n  - token_age_days < 3 or > 30\n\nSoft disqualifiers (reduce score but don't block):\n  - volume_24h_usd < 100000: halve final score\n\nEntry threshold: 175/400 (same as v1)\n\nKeep score_signal() unchanged for backward compatibility (Base Trader may call it).\n\nConstraints:\n- Do NOT modify score_signal() -- only add score_signal_solana()\n- Use only token dict fields that SV2-002/SV2-003 will produce\n- No new imports needed",
+      "acceptanceCriteria": [
+        "python3 -m py_compile businesses/horizen-zkverify/solana-trader/scripts/signal_filter.py",
+        "python3 -c \"import sys; sys.path.insert(0,'businesses/horizen-zkverify/solana-trader/scripts'); from signal_filter import score_signal_solana; print('function exists')\"",
+        "python3 -c \"import sys; sys.path.insert(0,'businesses/horizen-zkverify/solana-trader/scripts'); from signal_filter import score_signal; print('score_signal unchanged')\""
+      ],
+      "qualityChecks": "python3 -m py_compile businesses/horizen-zkverify/solana-trader/scripts/signal_filter.py",
+      "priority": 4,
+      "passes": false,
+      "attempts": 0,
+      "dependsOn": [
+        "SV2-003"
+      ],
+      "dependencyPolicy": "block",
+      "contextFiles": [
+        "businesses/horizen-zkverify/solana-trader/scripts/signal_filter.py",
+        "businesses/horizen-zkverify/solana-trader/scripts/scanner.py"
+      ]
+    },
+    {
+      "id": "SV2-005",
+      "title": "run_pipeline.py - updated pipeline flow for Solana v2",
+      "description": "Current state: run_pipeline.py calls load_candidate_tokens() then for each token calls get_flow_intelligence() then score_signal(). Credit guard at 500 cr causes hard stop.\n\nWhat to change in run_pipeline.py:\n\n1. Import: add score_signal_solana from signal_filter\n2. Change scoring call: use score_signal_solana() instead of score_signal()\n3. Remove per-token flow_intel calls: the current loop calls get_flow_intelligence(address) for every candidate. For Solana v2, we ONLY call flow_intel for tokens that pass Tier 2 filters and are in the top 3 by DexScreener ranking. Update the loop:\n   - After hard filters, if token not in top_3 by dex_score AND credits < 200: skip flow_intel call\n   - Top 3 always get flow_intel if credits >= 100\n4. Credit guard: change threshold from 500 to 200 (only gate flow_intel calls, not discovery)\n5. Flow intel (get_flow_intelligence) stays available but is only called on top candidates, not all\n6. Config changes to read:\n   - min_token_age_days: 3 (from config, not hardcoded 30)\n   - max_token_age_days: 30 (new config param)\n   - min_liquidity_usd: 50000 (from config)\n   - flow_intel_enabled: true (new config param -- skip flow_intel calls if false)\n\nKeep: get_sol_price_usd(), get_btc_5h_change(), positions/load_positions(), buy/sell logic, notification logic, credit tracking.\n\nConstraints:\n- Do NOT modify execute.py or decision.py\n- Do NOT change the paper_trade logic\n- Keep credit logging unchanged",
+      "acceptanceCriteria": [
+        "python3 -m py_compile businesses/horizen-zkverify/solana-trader/scripts/run_pipeline.py",
+        "grep -q 'score_signal_solana' businesses/horizen-zkverify/solana-trader/scripts/run_pipeline.py"
+      ],
+      "qualityChecks": "python3 -m py_compile businesses/horizen-zkverify/solana-trader/scripts/run_pipeline.py",
+      "priority": 5,
+      "passes": false,
+      "attempts": 0,
+      "dependsOn": [
+        "SV2-004"
+      ],
+      "dependencyPolicy": "block",
+      "contextFiles": [
+        "businesses/horizen-zkverify/solana-trader/scripts/run_pipeline.py",
+        "businesses/horizen-zkverify/solana-trader/scripts/signal_filter.py"
+      ]
+    },
+    {
+      "id": "SV2-006",
+      "title": "config.yaml - updated Solana v2 parameters",
+      "description": "Current state: config.yaml has min_token_age_days: 30, min_liquidity_usd: 100000, no max_token_age_days, credit guard handled in run_pipeline.py hardcoded at 500.\n\nWhat to change in config.yaml:\n\nAdd these params:\n  min_token_age_days: 3        # was 30 -- catch early pumps\n  max_token_age_days: 30      # new -- cap to avoid old tokens\n  min_liquidity_usd: 50000    # was 100000 -- lower to catch more candidates\n  min_volume_24h_usd: 100000   # new -- filter dead tokens\n  max_market_cap_usd: 100000000  # was 500000000 -- cap to stay in pump range\n  flow_intel_enabled: true     # new -- can disable to save credits\n  dexscreener_cache_ttl: 900   # new -- 15 min in seconds\n  nansen_netflow_cache_ttl: 14400  # new -- 4h in seconds\n  credit_guard_min: 200         # new -- skip flow_intel below this threshold\n\nChange existing:\n  min_market_cap_usd: 50000   # was 5000000 -- lower to $50K (dexscreener already filters)\n\nConstraints:\n- Do NOT change paper_trade, stop_loss_pct, tier1_pct, tier2_pct, max_positions, position_size_usd -- these are working correctly\n- Keep all existing params that aren't listed above",
+      "acceptanceCriteria": [
+        "python3 -c \"import yaml; c=yaml.safe_load(open('businesses/horizen-zkverify/solana-trader/config/config.yaml')); assert 'min_token_age_days' in c; assert 'max_token_age_days' in c; assert 'flow_intel_enabled' in c; assert c['min_token_age_days']==3; print('config OK')\"",
+        "python3 -c \"import yaml; c=yaml.safe_load(open('businesses/horizen-zkverify/solana-trader/config/config.yaml')); print('min_age:', c.get('min_token_age_days')); print('max_age:', c.get('max_token_age_days')); print('flow_intel:', c.get('flow_intel_enabled'))\""
+      ],
+      "qualityChecks": "python3 -c \"import yaml; yaml.safe_load(open('businesses/horizen-zkverify/solana-trader/config/config.yaml'))\"",
+      "priority": 6,
+      "passes": false,
+      "attempts": 0,
+      "dependsOn": [
+        "SV2-005"
+      ],
+      "dependencyPolicy": "block",
+      "contextFiles": [
+        "businesses/horizen-zkverify/solana-trader/config/config.yaml"
+      ]
+    },
+    {
+      "id": "SV2-007",
+      "title": "Paper trade validation - 48h dry run",
+      "description": "Current state: after SV2-001 through SV2-006, all code changes are complete. Need to validate the new pipeline in paper trade mode before going live.\n\nWhat to do:\n1. Set paper_trade: true in config.yaml (already handled by the existing paper_trade flag -- keep it true)\n2. Run the pipeline manually: cd businesses/horizen-zkverify/solana-trader && python3 scripts/run_pipeline.py\n3. Check output: tokens found via DexScreener, scores returned, any buys triggered\n4. Report: how many candidates found, score distribution, any errors\n5. Verify credit usage: check credit log for actual cr consumed\n\nRun at least 3 consecutive pipeline runs (15 min apart if possible, or just 3 consecutive runs) to validate cache behavior.\n\nThis story validates but does NOT modify any files.",
+      "acceptanceCriteria": [
+        "cd businesses/horizen-zkverify/solana-trader && python3 scripts/run_pipeline.py 2>&1 | head -50 | grep -E 'candidates|score|signal|DexScreener|Nansen' | head -20",
+        "cd businesses/horizen-zkverify/solana-trader && python3 scripts/run_pipeline.py 2>&1 | grep -E 'ERROR|Traceback|Exception' | head -5 || echo 'no errors'"
+      ],
+      "qualityChecks": "cd businesses/horizen-zkverify/solana-trader && python3 -m py_compile scripts/scanner.py scripts/signal_filter.py scripts/run_pipeline.py",
+      "priority": 7,
+      "passes": false,
+      "attempts": 0,
+      "dependsOn": [
+        "SV2-006"
+      ],
+      "dependencyPolicy": "block",
+      "contextFiles": [
+        "businesses/horizen-zkverify/solana-trader/scripts/scanner.py",
+        "businesses/horizen-zkverify/solana-trader/scripts/signal_filter.py",
+        "businesses/horizen-zkverify/solana-trader/scripts/run_pipeline.py"
+      ]
+    }
+  ]
+}

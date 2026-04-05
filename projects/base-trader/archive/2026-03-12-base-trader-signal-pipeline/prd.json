@@ -1,0 +1,33 @@
+{
+  "branchName": "base-trader-1c",
+  "stories": [
+    {
+      "id": "US-014",
+      "title": "Fix scanner.py 422 crash",
+      "description": "get_price_ohlcv(): try/except requests.HTTPError 422 → print '[SKIP] No OHLCV for {token_address}' + return []. Test with NANSEN_MOCK=0 python3 scripts/run_pipeline.py (must skip VIRTUAL without crash).",
+      "files": ["scripts/scanner.py"],
+      "acceptance": ["NANSEN_MOCK=0 python3 scripts/run_pipeline.py | grep -q 'SKIP.*VIRTUAL' && echo 'PASS' || echo 'FAIL'"]
+    },
+    {
+      "id": "US-015",
+      "title": "Telegram BUY alerts from pipeline",
+      "description": "run_pipeline.py: score≥175 + not SKIP_OPEN → OpenClaw message tool: '🟢 BUY {symbol} score {score}\\nEntry: ${amount} @ {entry_price}\\nStop: {support} Target: {resistance}\\nApprove?' to channel=telegram target=374999219.",
+      "files": ["scripts/run_pipeline.py"],
+      "acceptance": ["NANSEN_MOCK=1 python3 scripts/run_pipeline.py → Telegram sent (check Telegram history)"]
+    },
+    {
+      "id": "US-016",
+      "title": "Launchd plist + exit monitor cron",
+      "description": "1. ~/Library/LaunchAgents/com.crestview.base-trader.plist: 30min run-pipeline.sh + 60min data/exit_monitor.py\\n2. data/exit_monitor.py: load positions.json → for each: check price vs stop/target + SM netflow → exit if hit.",
+      "files": ["run-pipeline.sh","data/exit_monitor.py"],
+      "acceptance": ["launchctl list | grep crestview → PID active","launchctl start com.crestview.base-trader → data/launchd.log updated"]
+    },
+    {
+      "id": "US-017",
+      "title": "Manual trade logger script",
+      "description": "scripts/log_trade_manual.py: read JSON stdin → append trade_log.jsonl + update/create positions.json entry.",
+      "files": ["scripts/log_trade_manual.py"],
+      "acceptance": ["echo '{\"ts\":\"2026-03-12T20:00Z\",\"symbol\":\"BNKR\",\"amount_usd\":10,\"entry_price\":1.537,\"tx\":\"0xmanual\"}' | python3 scripts/log_trade_manual.py → tail trade_log.jsonl shows entry"]
+    }
+  ]
+}

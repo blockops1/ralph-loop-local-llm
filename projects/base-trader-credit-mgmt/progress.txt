@@ -1,0 +1,47 @@
+# Ralph Progress Log — base-trader-credit-mgmt
+Started: 2026-03-15T16:39:45.183055
+---
+
+## [2026-03-15 16:40]
+❌ US-001 FAILED
+$ p
+STDERR:
+/bin/sh: p: command not found
+EXIT CODE: 127
+
+## [2026-03-15 16:42]
+❌ US-001 FAILED
+$ p
+STDERR:
+/bin/sh: p: command not found
+EXIT CODE: 127
+
+## [2026-03-15 16:43]
+❌ US-001 FAILED
+$ p
+STDERR:
+/bin/sh: p: command not found
+EXIT CODE: 127
+
+## [2026-03-15 17:52]
+❌ US-001 FAILED
+$ p
+STDERR:
+/bin/sh: p: command not found
+EXIT CODE: 127
+
+## [2026-03-15 17:54]
+✅ US-001: credit_tracker.py -- per-run credit logging
+Implemented US-001: Created scripts/credit_tracker.py with two functions - get_credits_remaining() calls Nansen API and returns credits_remaining or -1 on error, and log_credit_usage() appends JSONL entries to data/credit_log.jsonl. All acceptance criteria pass: syntax check, imports, and grep check
+
+## [2026-03-15 17:57]
+✅ US-002: run_pipeline.py -- wrap run with credit before/after calls
+Implemented US-002: Added credit tracking to run_pipeline.py by importing get_credits_remaining and log_credit_usage from credit_tracker, calling get_credits_remaining() after run_id generation, and calling log_credit_usage() with credits_before/after before the final summary print. All acceptance c
+
+## [2026-03-15 18:02]
+✅ US-003: credit_tracker.py -- daily budget gate in run_pipeline.py
+Implemented US-003: Added check_daily_budget() function to credit_tracker.py that reads data/credit_log.jsonl, sums credits_used for today's entries (skipping malformed/negative entries), and compares against daily_budget=(monthly_allowance*0.40)/30. Modified run_pipeline.py to import and call check
+
+## [2026-03-15 18:04]
+✅ US-004: daily_summary.py -- add credit burn section
+Implemented US-004: Added `get_credit_summary()` function to daily_summary.py that reads credit_log.jsonl and returns usage stats (today/yesterday/monthly credits, budget percentage, avg per run). Added a "Credits" section to the markdown report displaying these metrics. All acceptance criteria pass

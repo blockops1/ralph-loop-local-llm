@@ -1,0 +1,65 @@
+{
+  "project": "hyperliquid-nansen-audit",
+  "description": "Audit HyperLiquid Trader's Nansen integration. Compare fields returned by tgm/token-flow (what HyperLiquid uses) vs tgm/flow-intelligence (what Base and Solana use). Determine if HyperLiquid needs its own flow-intelligence calls or if token-flow provides equivalent data for scoring. Document findings. No code changes unless audit finds a gap.",
+  "branch": "dev",
+  "qualityChecks": [
+    "python3 -m py_compile businesses/personal/hyperliquid-trader/scripts/signal_scorer.py",
+    "python3 -c \"import sys; sys.path.insert(0,'businesses/personal/hyperliquid-trader/scripts'); from signal_scorer import get_nansen_flow, score_signal; print('imports OK')\""
+  ],
+  "contextFiles": [
+    "businesses/personal/hyperliquid-trader/scripts/signal_scorer.py",
+    "businesses/personal/hyperliquid-trader/scripts/hl_client.py",
+    "businesses/horizen-zkverify/PROJ-nansen-cache-refactor.md"
+  ],
+  "userStories": [
+    {
+      "id": "HL-001",
+      "title": "Document what tgm/token-flow returns vs tgm/flow-intelligence",
+      "description": "Current state: HyperLiquid Trader uses signal_scorer.py with get_nansen_flow() which calls POST https://api.nansen.ai/api/v1/tgm/token-flow. Base/Solana Traders use get_flow_intelligence() which calls POST https://api.nansen.ai/api/v1/tgm/flow-intelligence.\n\nWhat to do: read signal_scorer.py get_nansen_flow() and document exactly what fields the tgm/token-flow endpoint returns. Then read the flow_intelligence return fields from base-trader scanner.py get_flow_intelligence(). Compare the two endpoint responses field by field.\n\nCreate a new file: businesses/personal/hyperliquid-trader/docs/nansen-audit.md\n\nContent of the audit doc:\n## Nansen Endpoint Comparison: token-flow vs flow-intelligence\n\n### tgm/token-flow (HyperLiquid)\n[Document all fields returned by get_nansen_flow() in signal_scorer.py -- list each field and its type/description]\n\n### tgm/flow-intelligence (Base/Solana)\n[Document all fields returned by get_flow_intelligence() in base-trader scanner.py -- list each field and its type/description]\n\n### Field Comparison Table\n[Table with columns: Field Name | In token-flow? | In flow-intelligence? | Equivalent?]\n\n### Conclusion\n[Does token-flow provide equivalent data for scoring purposes? Yes/No and why]\n\nConstraints:\n- This is a documentation-only story -- do NOT modify any Python code\n- Read existing files to extract field information\n- The audit doc should be in markdown format",
+      "acceptanceCriteria": [
+        "test -f businesses/personal/hyperliquid-trader/docs/nansen-audit.md",
+        "grep -q 'token-flow' businesses/personal/hyperliquid-trader/docs/nansen-audit.md",
+        "grep -q 'flow-intelligence' businesses/personal/hyperliquid-trader/docs/nansen-audit.md"
+      ],
+      "qualityChecks": "test -f businesses/personal/hyperliquid-trader/docs/nansen-audit.md && wc -l businesses/personal/hyperliquid-trader/docs/nansen-audit.md",
+      "priority": 1,
+      "passes": true,
+      "attempts": 1,
+      "dependsOn": [],
+      "dependencyPolicy": "block",
+      "contextFiles": [
+        "businesses/personal/hyperliquid-trader/scripts/signal_scorer.py",
+        "businesses/horizen-zkverify/base-trader/scripts/scanner.py"
+      ],
+      "_slug": "hyperliquid-nansen-audit",
+      "lastAttempt": "2026-03-24T18:13:22.437283+00:00",
+      "error": "Model API error: 500 Client Error: Internal Server Error for url: http://localhost:11434/v1/chat/completions - body: {\"error\":{\"code\":500,\"message\":\"Context size has been exceeded.\",\"type\":\"server_error\"}}",
+      "status": "blocked",
+      "blockedAt": "2026-03-24T18:13:22.980349+00:00",
+      "blockReason": "Model API error: 500 Client Error: Internal Server Error for url: http://localhost:11434/v1/chat/completions - body: {\"error\":{\"code\":500,\"message\":\"Context size has been exceeded.\",\"type\":\"server_error\"}}",
+      "notes": "Done manually: audit doc written to businesses/personal/hyperliquid-trader/docs/nansen-audit.md, PROJ doc Phase 3 updated."
+    },
+    {
+      "id": "HL-002",
+      "title": "Assess whether HyperLiquid needs its own flow-intelligence calls",
+      "description": "Current state: HL-001 has produced nansen-audit.md comparing token-flow vs flow-intelligence.\n\nWhat to do: based on the audit findings in nansen-audit.md:\n\nIf token-flow provides equivalent scoring data (same or superset of flow-intelligence fields used in Base/Solana scoring):\n- Update PROJ-nansen-cache-refactor.md Phase 3 section to note: 'token-flow equivalent to flow-intelligence for scoring purposes -- HyperLiquid already independent'\n\nIf token-flow is missing critical fields used in Base/Solana signal scoring:\n- Propose what changes (if any) are needed to HyperLiquid's Nansen integration\n- Update PROJ-nansen-cache-refactor.md Phase 3 section with findings and recommended action\n\nConstraints:\n- Do NOT modify signal_scorer.py or hl_client.py unless the audit finds a critical gap that requires code changes\n- If no code changes needed, HL-002 is documentation-only",
+      "acceptanceCriteria": [
+        "grep -q 'token-flow' businesses/personal/hyperliquid-trader/docs/nansen-audit.md",
+        "grep -q 'flow-intelligence' businesses/personal/hyperliquid-trader/docs/nansen-audit.md"
+      ],
+      "qualityChecks": "test -f businesses/personal/hyperliquid-trader/docs/nansen-audit.md",
+      "priority": 2,
+      "passes": true,
+      "attempts": 1,
+      "dependsOn": [
+        "HL-001"
+      ],
+      "dependencyPolicy": "block",
+      "contextFiles": [
+        "businesses/personal/hyperliquid-trader/docs/nansen-audit.md",
+        "businesses/horizen-zkverify/PROJ-nansen-cache-refactor.md"
+      ],
+      "notes": "Done manually: audit doc written to businesses/personal/hyperliquid-trader/docs/nansen-audit.md, PROJ doc Phase 3 updated."
+    }
+  ]
+}

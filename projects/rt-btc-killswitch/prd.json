@@ -1,0 +1,27 @@
+{
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Add BTC macro kill switch to run_range_pipeline.py",
+      "description": "Current state: run_range_pipeline.py at businesses/horizen-zkverify/range-trader/scripts/run_range_pipeline.py has no BTC macro check. In a crypto crash, all support levels break simultaneously.\n\nWhat to build:\n1. Add get_btc_4h_change() function (same as base-trader's fix):\n   - Call CoinGecko free API: GET https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=1\n   - Extract price from ~4h ago and current\n   - Return % change (negative if dropped)\n   - On error: return 0.0 (neutral)\n   - 10-second timeout\n\n2. In main(), after scan but before filtering:\n   - btc_change = get_btc_4h_change()\n   - If btc_change < -3.0:\n     - Print '[PIPELINE] BTC macro kill switch: {btc_change:.1f}% in 4h \u2014 skipping BUY signals'\n     - Filter out all BUY signals (keep SELL signals \u2014 selling during a crash is correct)\n     - Log the kill switch activation in run_log\n\n3. SELL signals must NOT be blocked by the kill switch \u2014 if a stop loss triggers during a crash, we absolutely want to sell.\n\nConstraints:\n- Do NOT modify range_scanner.py, range_signal_filter.py, or range_execute.py\n- The -3% threshold should be a constant at module level: BTC_KILL_SWITCH_PCT = -3.0\n- CoinGecko free tier: no API key needed, 10-30 calls/min",
+      "acceptanceCriteria": [
+        "python3 -m py_compile businesses/horizen-zkverify/range-trader/scripts/run_range_pipeline.py",
+        "grep -q 'btc' businesses/horizen-zkverify/range-trader/scripts/run_range_pipeline.py",
+        "grep -q 'kill_switch\\|KILL_SWITCH' businesses/horizen-zkverify/range-trader/scripts/run_range_pipeline.py"
+      ],
+      "qualityChecks": [
+        "python3 -m py_compile businesses/horizen-zkverify/range-trader/scripts/run_range_pipeline.py"
+      ],
+      "priority": 1,
+      "passes": true,
+      "attempts": 0,
+      "dependsOn": [],
+      "dependencyPolicy": "block",
+      "contextFiles": [
+        "businesses/horizen-zkverify/range-trader/scripts/run_range_pipeline.py"
+      ],
+      "_slug": "rt-btc-killswitch",
+      "notes": "Implemented BTC macro kill switch in run_range_pipeline.py:\n- Added get_btc_4h_change() function that calls CoinGecko API to get BTC price change over last 4 hours\n- Added BTC_KILL_SWITCH_PCT = -3.0 c"
+    }
+  ]
+}

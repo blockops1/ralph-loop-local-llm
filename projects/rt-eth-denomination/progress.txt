@@ -1,0 +1,42 @@
+# Ralph Progress Log - rt-eth-denomination
+Started: 2026-03-18T07:10:25.792264
+---
+
+## [2026-03-18 07:13]
+✅ US-001: Scanner: fetch OHLCV and price in ETH (token-native denomination)
+Implemented US-001: Scanner now fetches OHLCV and price in ETH denomination.
+
+Changes made:
+1. Changed `_fetch_gt_ohlcv()` to use `currency='token'` so GeckoTerminal returns candles in WETH for TOKEN/WETH pools.
+2. Added `get_price_eth(token_address: str) -> float` function that:
+   - Primary: Fetch
+
+## [2026-03-18 07:15]
+✅ US-002: Pipeline: size positions in ETH from wallet ETH balance
+Implemented US-002: Changed position sizing from USDC to ETH balance.
+
+Changes made:
+1. Replaced `MIN_USDC_TRADE = 10.0` with `MIN_ETH_TRADE = 0.003`
+2. Kept `POSITION_SIZE_PCT = 0.25` (25% of tradeable ETH)
+3. Added `get_eth_balance(w3, address)` function using `w3.eth.get_balance() / 1e18`
+4. In B
+
+## [2026-03-18 07:19]
+✅ US-003: Execute: buy_token() accepts amount_eth directly (no USD->ETH conversion)
+Implemented US-003: Changed buy_token() signature from amount_usdc to amount_eth, removed USD->ETH conversion in Slipstream path (now uses weth_needed = amount_eth directly), updated log to print WETH amount, replaced result dict key from amount_usdc to amount_eth, and added warning log for classic
+
+## [2026-03-18 07:20]
+✅ US-004: Exit monitor: fetch price in ETH and compare to ETH-denominated stop/target
+Implemented US-004: Switched range_exit_monitor.py to use ETH-denominated prices. Changes: (1) Imported get_price_eth from range_scanner; (2) Replaced get_price() call with get_price_eth() for current price fetch; (3) Updated log line to use 'E:' prefix instead of '$' for all price displays; (4) Upd
+
+## [2026-03-18 07:23]
+✅ US-005: Daily report: display ETH prices and S/R in token range table
+Updated Token Ranges section to display ETH prices:
+- Changed price source from `price_usd` to `price_eth`
+- Updated formatting from `$` prefix to `E:` prefix with 6 decimal places
+- Updated column headers to "Support (ETH)", "Resist (ETH)", "Price (ETH)"
+- Added "(USD approx)" note to P&L column he
+
+## [2026-03-18 07:24]
+✅ US-006: Clear OHLCV cache and validate end-to-end scan produces ETH prices
+Created clear_ohlcv_cache.py script that reads gt_ohlcv_cache.json and gt_price_cache.json, writes {} to them, and prints 'Cache cleared'. All acceptance criteria pass: py_compile succeeds for both scripts, and the cache-clearing script exits 0 with proper output. The range_scanner.py already suppor
