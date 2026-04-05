@@ -2,8 +2,9 @@
 """
 loop_runner.py — Auto-loop through all pending stories.
 
-Provides run_all_stories() which iterates through all pending stories
-in the PRD until done, blocked, or max_iterations reached.
+Two modes:
+  run_all_stories()        — single-stage (CREATE only, no critique/fix)
+  run_all_through_pipeline() — 3-stage pipeline per story (CREATE → CRITIQUE → FIX)
 """
 
 import sys
@@ -81,4 +82,64 @@ def run_all_stories(args, cfg, log, prd, slug):
             log.error(f"Story {story['id']} failed: {summary[:100]}")
             _ralph_mod.notify(f"❌ {story['id']} FAILED in '{slug}': {summary[:120]}", log)
         iteration += 1
+    return prd
+
+
+def run_all_through_pipeline(args, cfg, log, prd, slug):
+    """
+    Iterate through all pending stories, running each through the full 3-stage
+    pipeline (CREATE → CRITIQUE → FIX) before moving to the next story.
+
+    Called by _run() in ralph.py when --pipeline flag is set.
+    Returns the final prd dict.
+    """
+    # Local import to avoid circular dependency:
+    # pipeline_runner imports ralph, ralph imports loop_runner
+    from prd_manager import (
+        get_next_story, story_summary,
+        mark_story_done, mark_story_failed,
+        save_prd, append_progress
+    )
+    import ralph as _ralph_mod
+
+    max_iter = cfg.get('max_iterations', 20)
+    iteration = 0
+
+    # Import pipeline_for_story locally to avoid circular imports at module level
+    import pipeline_runner as _pr
+
+    while iteration < max_iter:
+        # If --story was specified, only run that one story
+        if args.story:
+            if iteration > 0:
+                log.info('--story flag: single-story mode, stopping after first iteration')
+                break
+
+        story = get_next_story(prd, max_attempts=cfg.get('max_attempts_per_story', 3))
+        if story is None:
+            log.info('No more pending stories — done.')
+            break
+
+        story['_slug'] = slug
+        log.info(f"[{iteration+1}/{max_iter}] Story: {story['id']} — {story['title']}")
+        log.info(f'PRD status: {story_summary(prd)}')
+
+        # Run all 3 stages: CREATE → CRITIQUE → FIX
+        ok, summary, output_file = _pr.pipeline_for_story(story, cfg, log)
+
+        if ok:
+            prd = mark_story_done(prd, story['id'], summary[:200])
+            save_prd(prd, slug)
+            append_progress(slug, f"✅ {story['id']}: {story['title']}\n{summary[:300]}")
+            log.info(f"Story {story['id']} marked complete (3-stage pipeline)")
+            _ralph_mod.notify(f"✅ {story['id']} done in '{slug}' [3-stage]", log)
+        else:
+            prd = mark_story_failed(prd, story['id'], summary)
+            save_prd(prd, slug)
+            append_progress(slug, f"❌ {story['id']} FAILED\n{summary[:300]}")
+            log.error(f"Story {story['id']} failed: {summary[:100]}")
+            _ralph_mod.notify(f"❌ {story['id']} FAILED in '{slug}': {summary[:120]}", log)
+
+        iteration += 1
+
     return prd

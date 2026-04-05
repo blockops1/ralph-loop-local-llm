@@ -765,6 +765,8 @@ def main():
     parser.add_argument("--max-iterations", type=int, default=None)
     parser.add_argument("--list-projects", action="store_true", help="List all active project slugs and exit")
     parser.add_argument("--version", action="store_true", help="Print ralph version and exit")
+    parser.add_argument("--pipeline", action="store_true", default=True, help="Run each story through the full 3-stage pipeline (CREATE -> CRITIQUE -> FIX). Default.")
+    parser.add_argument("--single-stage", action="store_true", default=False, help="Disable 3-stage pipeline. Run single-stage CREATE only (old behavior).")
     args = parser.parse_args()
 
     # Handle --version flag
@@ -810,7 +812,7 @@ def main():
 def _run(args, cfg: dict, log: logging.Logger):
     slug = args.slug
 
-    from loop_runner import run_all_stories
+    from loop_runner import run_all_stories, run_all_through_pipeline
     # Load PRD
     try:
         prd = load_prd(slug)
@@ -824,7 +826,13 @@ def _run(args, cfg: dict, log: logging.Logger):
     # Archive if branch changed
     archive_if_branch_changed(slug, prd)
 
-    prd = run_all_stories(args, cfg, log, prd, slug)
+    use_3stage = args.pipeline and not args.single_stage
+    if use_3stage:
+        log.info("[Ralph] 3-stage pipeline: CREATE -> CRITIQUE -> FIX per story")
+        prd = run_all_through_pipeline(args, cfg, log, prd, slug)
+    else:
+        log.info("[Ralph] Single-stage mode: CREATE only")
+        prd = run_all_stories(args, cfg, log, prd, slug)
 
     if all_done(prd):
         log.info("All stories complete!")
