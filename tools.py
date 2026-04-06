@@ -7,9 +7,11 @@ Provides:
 """
 
 import os
+import re
 import subprocess
 import json
 import logging
+import tempfile
 from pathlib import Path
 
 log = logging.getLogger("ralph.tools")
@@ -30,10 +32,7 @@ TOOL_DEFINITIONS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "path": {
-                        "type": "string",
-                        "description": "Path to file, relative to workspace root or absolute."
-                    }
+                    "path": {"type": "string", "description": "Path to file, relative to workspace root or absolute."}
                 },
                 "required": ["path"]
             }
@@ -47,16 +46,25 @@ TOOL_DEFINITIONS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "path": {
-                        "type": "string",
-                        "description": "Path to file, relative to workspace root or absolute."
-                    },
-                    "content": {
-                        "type": "string",
-                        "description": "Full content to write to the file."
-                    }
+                    "path": {"type": "string", "description": "Path to file, relative to workspace root or absolute."},
+                    "content": {"type": "string", "description": "Full content to write to the file."}
                 },
                 "required": ["path", "content"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "copy_file",
+            "description": "Copy a file from source to destination. Both paths are interpreted relative to workspace root.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "src": {"type": "string", "description": "Source file path."},
+                    "dst": {"type": "string", "description": "Destination file path."}
+                },
+                "required": ["src", "dst"]
             }
         }
     },
@@ -68,10 +76,7 @@ TOOL_DEFINITIONS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "path": {
-                        "type": "string",
-                        "description": "Directory path, relative to workspace root or absolute."
-                    }
+                    "path": {"type": "string", "description": "Directory path, relative to workspace root or absolute."}
                 },
                 "required": ["path"]
             }
@@ -80,19 +85,29 @@ TOOL_DEFINITIONS = [
     {
         "type": "function",
         "function": {
-            "name": "run_command",
-            "description": "Run a shell command and return stdout, stderr, and exit code. Use for quality checks, tests, or inspecting the environment. Commands run from workspace root unless cwd is specified.",
+            "name": "search_files",
+            "description": "Search for a pattern in files (like grep). Returns matching lines with line numbers.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "command": {
-                        "type": "string",
-                        "description": "Shell command to run."
-                    },
-                    "cwd": {
-                        "type": "string",
-                        "description": "Working directory (optional, defaults to workspace root)."
-                    }
+                    "pattern": {"type": "string", "description": "Regex pattern to search."},
+                    "path": {"type": "string", "description": "Directory to search in. Defaults to workspace root."},
+                    "file_glob": {"type": "string", "description": "Optional glob pattern to filter files (e.g. '*.py')."}
+                },
+                "required": ["pattern"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "run_command",
+            "description": "Run a shell command and return stdout, stderr, and exit code.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "command": {"type": "string", "description": "Shell command to run."},
+                    "cwd": {"type": "string", "description": "Working directory (optional)."}
                 },
                 "required": ["command"]
             }
@@ -101,26 +116,65 @@ TOOL_DEFINITIONS = [
     {
         "type": "function",
         "function": {
-            "name": "git_status",
-            "description": "Check git status - shows modified, staged, and untracked files.",
+            "name": "run_tests",
+            "description": "Run pytest on a directory or file. Returns test results summary.",
             "parameters": {
                 "type": "object",
-                "properties": {}
+                "properties": {
+                    "path": {"type": "string", "description": "Path to test file or directory (relative to workspace)."},
+                    "args": {"type": "string", "description": "Additional pytest args as a string."}
+                },
+                "required": ["path"]
             }
         }
     },
     {
         "type": "function",
         "function": {
-            "name": "git_commit",
-            "description": "Stage all changes and create a LOCAL git commit. Workspace git is a mirror only - NO push/pull. Only call this after quality checks pass.",
+            "name": "http_get",
+            "description": "Fetch a URL and return the response body. Use for API calls, fetching docs, etc.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "message": {
-                        "type": "string",
-                        "description": "Commit message. Should be concise and describe what changed."
-                    }
+                    "url": {"type": "string", "description": "URL to fetch."},
+                    "headers": {"type": "object", "description": "Optional HTTP headers as a dict."}
+                },
+                "required": ["url"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "query_json",
+            "description": "Query data from a JSON file using a JMESPath-like key path (e.g. 'data.tokens[0].address').",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "path": {"type": "string", "description": "Path to JSON file."},
+                    "query": {"type": "string", "description": "JMESPath query."}
+                },
+                "required": ["path", "query"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "git_status",
+            "description": "Check git status — shows modified, staged, and untracked files.",
+            "parameters": {"type": "object", "properties": {}}
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "git_commit",
+            "description": "Stage all changes and create a LOCAL git commit. Workspace git is a mirror only — NO push/pull.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "message": {"type": "string", "description": "Commit message."}
                 },
                 "required": ["message"]
             }
@@ -130,14 +184,11 @@ TOOL_DEFINITIONS = [
         "type": "function",
         "function": {
             "name": "task_complete",
-            "description": "Signal that the current story is fully implemented and all acceptance criteria are met. Include a brief summary of what was done and any key learnings.",
+            "description": "Signal that the current story is fully implemented.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "summary": {
-                        "type": "string",
-                        "description": "What was implemented and any important notes for future iterations."
-                    }
+                    "summary": {"type": "string", "description": "Brief summary of what was done."}
                 },
                 "required": ["summary"]
             }
@@ -147,7 +198,7 @@ TOOL_DEFINITIONS = [
 
 
 # ---------------------------------------------------------------------------
-# Tool executors
+# Utility
 # ---------------------------------------------------------------------------
 
 def _resolve_path(path: str) -> Path:
@@ -157,6 +208,33 @@ def _resolve_path(path: str) -> Path:
         return p
     return WORKSPACE / p
 
+
+# ---------------------------------------------------------------------------
+# Unicode sanitizer for Python files
+# ---------------------------------------------------------------------------
+
+_UNICODE_SUBS = {
+    '\u2014': '-', '\u2013': '-', '\u2018': "'", '\u2019': "'",
+    '\u201c': '"', '\u201d': '"', '\u2192': '->', '\u2022': '*',
+    '\u00b7': '.', '\u2026': '...', '\u00a0': ' ',
+}
+
+def _sanitize_for_python(content: str, path: str) -> tuple[str, int]:
+    if not path.endswith('.py'):
+        return content, 0
+    result = content
+    count = 0
+    for bad, good in _UNICODE_SUBS.items():
+        n = result.count(bad)
+        if n:
+            result = result.replace(bad, good)
+            count += n
+    return result, count
+
+
+# ---------------------------------------------------------------------------
+# File tools
+# ---------------------------------------------------------------------------
 
 def tool_read_file(path: str) -> str:
     resolved = _resolve_path(path)
@@ -175,63 +253,16 @@ def tool_read_file(path: str) -> str:
         return f"ERROR reading file: {e}"
 
 
-_UNICODE_SUBS = {
-    '\u2014': '-',   # em-dash
-    '\u2013': '-',   # en-dash
-    '\u2018': "'",   # left single quote
-    '\u2019': "'",   # right single quote
-    '\u201c': '"',   # left double quote
-    '\u201d': '"',   # right double quote
-    '\u2192': '->',  # right arrow
-    '\u2022': '*',   # bullet
-    '\u00b7': '.',   # middle dot
-    '\u2026': '...', # ellipsis
-    '\u00a0': ' ',   # non-breaking space
-}
-
-def _sanitize_for_python(content: str, path: str) -> tuple[str, int]:
-    """
-    Normalize problematic Unicode in .py files.
-    - Smart quotes → ASCII equivalents (prevents bugs in string literals)
-    - Em/en dashes → hyphens
-    - Non-breaking spaces → regular spaces (prevents indentation bugs)
-    - Other Unicode is PASSED THROUGH — Python 3 handles UTF-8 natively.
-    Returns (content, count_replaced).
-    """
-    if not path.endswith('.py'):
-        return content, 0
-    result = content
-    count = 0
-    for bad, good in _UNICODE_SUBS.items():
-        n = result.count(bad)
-        if n:
-            result = result.replace(bad, good)
-            count += n
-    # NOTE: Do NOT replace remaining non-ASCII with '_'.
-    # Python 3 fully supports Unicode in identifiers, strings, and comments.
-    # Silently destroying Unicode (e.g. in docstrings, comments, string literals)
-    # corrupts the source. If encoding is a problem, write_text() will error — which
-    # is the correct behavior, not silent corruption.
-    return result, count
-
-
 def tool_write_file(path: str, content: str) -> str:
-    # Guard: reject content that contains truncation artifacts from tool_read_file
     _TRUNCATION_MARKERS = [
-        "... [truncated",
-        "[truncated -",
-        "[truncated -",
-        "# ... truncated",
-        "# [truncated",
+        "... [truncated", "[truncated -", "# ... truncated", "# [truncated",
     ]
     for _marker in _TRUNCATION_MARKERS:
         if _marker in content:
-            log.error(f"write_file BLOCKED: truncation artifact detected in content for {path}")
+            log.error(f"write_file BLOCKED: truncation artifact detected for {path}")
             return (
                 f"ERROR: Content contains a truncation artifact ({_marker!r}). "
-                f"Do NOT write truncated content. "
-                f"The file has more lines than shown. "
-                f"Re-read the file, then write the COMPLETE content including all lines after the truncation point."
+                f"Do NOT write truncated content. Re-read the file to get the complete content."
             )
     resolved = _resolve_path(path)
     sanitized, replaced = _sanitize_for_python(content, str(resolved))
@@ -247,6 +278,22 @@ def tool_write_file(path: str, content: str) -> str:
         return msg
     except Exception as e:
         return f"ERROR writing file: {e}"
+
+
+def tool_copy_file(src: str, dst: str) -> str:
+    """Copy src to dst. dst's parent dir is created if needed."""
+    src_p = _resolve_path(src)
+    dst_p = _resolve_path(dst)
+    if not src_p.exists():
+        return f"ERROR: Source not found: {src_p}"
+    log.info(f"copy_file: {src_p} -> {dst_p}")
+    try:
+        import shutil
+        dst_p.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src_p, dst_p)
+        return f"OK: Copied {src} -> {dst}"
+    except Exception as e:
+        return f"ERROR copying file: {e}"
 
 
 def tool_list_dir(path: str) -> str:
@@ -267,121 +314,92 @@ def tool_list_dir(path: str) -> str:
         return f"ERROR listing directory: {e}"
 
 
+# ---------------------------------------------------------------------------
+# Search tools
+# ---------------------------------------------------------------------------
+
+def tool_search_files(pattern: str, path: str = None, file_glob: str = None) -> str:
+    """Search for pattern in files. Returns matching lines with line numbers."""
+    search_root = _resolve_path(path) if path else WORKSPACE
+    log.info(f"search_files: pattern={pattern!r} path={search_root}")
+
+    cmd = ["grep", "-rn", "--color=never", pattern, str(search_root)]
+    if file_glob:
+        cmd.insert(2, "--include")
+        cmd.insert(3, file_glob)
+
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+        if result.stdout.strip():
+            return result.stdout.strip()
+        return f"(no matches for {pattern!r} in {search_root})"
+    except subprocess.TimeoutExpired:
+        return "ERROR: search timed out after 30s"
+    except Exception as e:
+        return f"ERROR searching files: {e}"
+
+
+# ---------------------------------------------------------------------------
+# Shell / command tools
+# ---------------------------------------------------------------------------
+
 _BLOCKED_GIT_SUBCOMMANDS = {"checkout", "reset", "revert", "clean", "stash", "restore", "push", "pull"}
-
-# Commands that are always blocked — too dangerous for an autonomous coding agent.
-# NOTE: Multi-word entries use substring matching, so only put exact dangerous commands here.
-# Inline code patterns (python -c, sh -c, etc.) are handled separately to avoid false positives.
-# Shell interpreters (bash, sh, zsh) are NOT here — inline patterns block dangerous -c usage,
-# and file-execution ("bash script.sh") is a legitimate Ralph workflow.
 _BLOCKED_COMMANDS = {
-    # Network / remote access
-    # NOTE: curl and wget are ALLOWED here (in _ALLOWED_COMMANDS) for public URL fetching.
-    # They remain in this comment for documentation only — do NOT add them back to _BLOCKED.
-    "ssh", "scp", "sftp", "rsync",
-    "nc", "ncat", "netcat", "telnet",
+    "ssh", "scp", "sftp", "rsync", "telnet",
     "mosquitto_pub", "mosquitto_sub",
-    # OS / app interaction
-    "osascript", "open", "xdg-open", "mimeopen",
-    "launchctl", "systemctl", "service",
-    # Destructive filesystems
-    "rm", "rmdir", "dd", "truncate", "mkfs",
-    "fdisk", "parted", "mount", "umount",
-    # Privilege escalation
+    "osascript", "open", "xdg-open", "mimeopen", "launchctl", "systemctl", "service",
+    "rm", "rmdir", "dd", "truncate", "mkfs", "fdisk", "parted", "mount", "umount",
     "sudo", "su",
-    # Package managers (install arbitrary code)
-    "pip install", "pip3 install", "npm install", "yarn",
-    "gem install", "cargo install", "go install", "apk",
-    # Interactive editors (Ralph should use write_file, not interactive editors)
+    "pip install", "pip3 install", "npm install", "yarn", "gem install", "cargo install", "go install", "apk",
     "vim", "vi", "nano", "emacs",
-    # Misc dangerous single tokens
-    "chmod", "chown", "exit",
-    #expect is handled by inline pattern
+    "chmod", "chown",
 }
-
-# Commands that are allowed (first token must be in this set or match git subcommand pattern)
 _ALLOWED_COMMANDS = {
     "python3", "python", "git", "grep", "find", "cat", "head", "tail",
-    "wc", "jq", "sort", "uniq", "awk", "sed", "ls", "pwd", "echo",
-    "test", "mkdir", "touch", "cp", "mv", "diff", "md5sum", "sha256sum",
-    "sha1sum", "sha512sum",
+    "wc", "jq", "sort", "uniq", "awk", "sed", "ls", "pwd", "echo", "test",
+    "mkdir", "touch", "cp", "mv", "diff", "md5sum", "sha256sum", "sha1sum", "sha512sum",
     "xargs", "tr", "cut", "basename", "dirname", "realpath", "readlink",
     "stat", "file", "tree", "fold", "printf", "date", "time",
     "git status", "git log", "git diff", "git add", "git commit", "git show",
     "git branch", "git checkout", "git reset", "git revert",
     "git stash list", "git stash pop", "git stash drop",
-    "git config", "git remote -v", "git fetch", "git describe",
-    "git rev-parse", "git symbolic-ref",
-    "python3 -m", "python -m",  # module invocation only
-    "pip list", "pip show",     # read-only pip queries
-    "pip3 list", "pip3 show",
-    # Rust toolchain (safe build/test tools for workspace projects)
+    "git config", "git remote -v", "git fetch", "git describe", "git rev-parse",
+    "python3 -m", "python -m",
+    "pip list", "pip show", "pip3 list", "pip3 show",
     "cargo", "cargo build", "cargo test", "cargo check", "cargo clippy",
     "rustc", "rustfmt",
-    # Network fetchers (read-only public URLs for Ralph's research and critique stages)
     "curl", "wget",
-    # Low-level system utilities (safe read-only use for git operations)
-    "stty",               # git commit fallback; dd removed — too dangerous
-    # Shell interpreters (safe when running files; dangerous -c usage blocked by inline patterns)
-    "bash", "sh", "zsh", "dash",
-    # Terminal session recorder (safe when running files)
-    "script",
+    "stty", "bash", "sh", "zsh", "dash", "script",
+    "pytest", "python3 -m pytest", "py.test",
 }
 
 
 def _is_command_blocked(command: str) -> tuple[bool, str]:
-    """
-    Check if a command is blocked.
-    Returns (blocked: bool, reason: str).
-    """
     import re as _re
 
-    # Check blocked commands using word-boundary regex for short tokens (<=3 chars).
-    # Using plain substring matching (e.g. "nc" in "NANSEN_MOCK") is too loose —
-    # it breaks compound commands like "test -f x || echo y" (|| contains "nc").
-    # Short tokens: use \b word boundary so "nc" doesn't match "NANSEN" or "||"
-    # Long tokens: substring matching is fine (e.g. "launchctl" won't appear in random paths)
-    #
-    # Exceptions:
-    # - "vi" skipped: \bvi\b matches "vi" in "git commit -vi" (verbose flag),
-    #   which is a false positive. vi is already blocked via _ALLOWED_COMMANDS
-    #   anyway (Ralph can't run interactive editors), so no safety gap.
     _SHORT_BLOCKERS = {b for b in _BLOCKED_COMMANDS if len(b) <= 3}
     for blocked in _BLOCKED_COMMANDS:
         if blocked.startswith("git "):
-            continue  # Skip git subcommands — handled separately
+            continue
         if blocked in _SHORT_BLOCKERS:
             if blocked == "vi":
-                # Special case: don't block "vi" in "git commit -vi" (verbose flag).
-                # Use negative lookbehind to require that vi is NOT preceded by a hyphen.
-                # (?<![a-zA-Z0-9_-])vi\b matches " vi " but NOT "-vi"
                 if _re.search(r'(?<![a-zA-Z0-9_-])vi\b', command):
                     return True, blocked
             elif _re.search(rf'\b{_re.escape(blocked)}\b', command):
                 return True, blocked
         else:
-            # Substring match for longer tokens (launchctl, mosquitto_*, etc.)
             if blocked in command:
                 return True, blocked
 
-    # Block inline code execution patterns (allowlist approach to dangerous flags)
-    # Block dangerous flag patterns while allowing safe file/script invocations
     inline_code_patterns = [
-        r'python3?\s+-(?!m\b|[d-z-])([c-]|$)',   # python -c, python3 -c, python -; NOT -m, -V, -h, --*
-        r'\bruby\s+-[er]',                        # ruby -e, ruby -r
-        r'\bperl\s+-[e]',                         # perl -e
-        r'\bnode\s+-[er]',                        # node -e, node --eval
-        r'\b(bash|sh|zsh|dash)\s+-c\b',           # bash -c inline; NOT "bash script.sh"
-        r'\bexpect\b',
+        r'python3?\s+-(?!m\b|[d-z-])([c-]|$)',
+        r'\bruby\s+-[er]', r'\bperl\s+-[e]', r'\bnode\s+-[er]',
+        r'\b(bash|sh|zsh|dash)\s+-c\b', r'\bexpect\b',
     ]
     for pattern in inline_code_patterns:
         if _re.search(pattern, command):
             return True, "inline code execution"
 
-    # Allowlist: check first token.
-    # First, strip leading VAR=value assignments (env vars don't affect safety assessment).
-    # e.g. "NANSEN_MOCK=1 python3 script.py" -> first token is "python3"
-    # Also handles: ./script.sh, /usr/bin/python3, $VAR, ${VAR}
     stripped = command
     while True:
         m = _re.match(r'^[A-Za-z_][A-Za-z0-9_]*=[^\s]+\s+', stripped)
@@ -401,42 +419,91 @@ def _is_command_blocked(command: str) -> tuple[bool, str]:
 def tool_run_command(command: str, cwd: str = None, timeout: int = 60) -> str:
     work_dir = _resolve_path(cwd) if cwd else WORKSPACE
 
-    # Block destructive/personal git subcommands - workspace git is a local mirror (never push/pull)
-    import re as _re
-    _git_sub = _re.search(r'\bgit\s+(\w+)', command)
+    _git_sub = re.search(r'\bgit\s+(\w+)', command)
     if _git_sub and _git_sub.group(1) in _BLOCKED_GIT_SUBCOMMANDS:
-        blocked = _git_sub.group(1)
-        log.warning(f"run_command BLOCKED: 'git {blocked}' is not allowed. Use git_commit to save work.")
-        return f"ERROR: 'git {blocked}' is blocked. Ralph may only use git_status and git_commit. Do not push or pull - workspace git is a local mirror only."
+        return f"ERROR: 'git {_git_sub.group(1)}' is blocked. Use git_status and git_commit only."
 
-    # Command allowlist / blocklist check
     blocked, reason = _is_command_blocked(command)
     if blocked:
-        log.warning(f"run_command BLOCKED: '{reason}' is not allowed in autonomous mode.")
-        return f"ERROR: '{reason}' is not an allowed command. Use only safe read-only or code-analysis commands. If you need a specific tool, ask your manager to add it to the allowlist."
+        return f"ERROR: '{reason}' is not an allowed command."
 
     log.info(f"run_command: {command!r} (cwd={work_dir})")
     try:
         result = subprocess.run(
-            command,
-            shell=True,
-            capture_output=True,
-            text=True,
-            cwd=str(work_dir),
-            timeout=timeout,
+            command, shell=True, capture_output=True, text=True,
+            cwd=str(work_dir), timeout=timeout,
         )
-        output_parts = []
+        parts = []
         if result.stdout.strip():
-            output_parts.append(f"STDOUT:\n{result.stdout.strip()}")
+            parts.append(f"STDOUT:\n{result.stdout.strip()}")
         if result.stderr.strip():
-            output_parts.append(f"STDERR:\n{result.stderr.strip()}")
-        output_parts.append(f"EXIT CODE: {result.returncode}")
-        return "\n".join(output_parts) if output_parts else f"EXIT CODE: {result.returncode}"
+            parts.append(f"STDERR:\n{result.stderr.strip()}")
+        parts.append(f"EXIT CODE: {result.returncode}")
+        return "\n".join(parts) if parts else f"EXIT CODE: {result.returncode}"
     except subprocess.TimeoutExpired:
         return f"ERROR: Command timed out after {timeout}s"
     except Exception as e:
         return f"ERROR running command: {e}"
 
+
+def tool_run_tests(path: str = None, args: str = "") -> str:
+    """Run pytest on a test directory or file."""
+    test_path = _resolve_path(path) if path else WORKSPACE
+    cmd = f"pytest {test_path}"
+    if args:
+        cmd += f" {args}"
+    return tool_run_command(cmd, timeout=120)
+
+
+def tool_http_get(url: str, headers: dict = None) -> str:
+    """Fetch a URL using curl."""
+    import urllib.request
+    log.info(f"http_get: {url}")
+    try:
+        req = urllib.request.Request(url)
+        if headers:
+            for k, v in headers.items():
+                req.add_header(k, v)
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            content = resp.read().decode("utf-8", errors="replace")
+            if len(content) > 50000:
+                return content[:50000] + f"\n... [truncated {len(content)-50000} chars]"
+            return content
+    except Exception as e:
+        return f"ERROR fetching {url}: {e}"
+
+
+def tool_query_json(path: str, query: str) -> str:
+    """Query a JSON file using a simple dot/brackets path."""
+    resolved = _resolve_path(path)
+    if not resolved.exists():
+        return f"ERROR: File not found: {resolved}"
+    try:
+        with open(resolved) as f:
+            data = json.load(f)
+    except Exception as e:
+        return f"ERROR loading JSON: {e}"
+
+    # Simple JMESPath-like query: 'a.b.c[0].d' or 'a.b[1]'
+    parts = re.split(r'\.(?![^\[]*\])', query)
+    try:
+        for part in parts:
+            m = re.match(r'^(.+)\[(-?\d+)\]$', part)
+            if m:
+                key, idx = m.group(1), int(m.group(2))
+                if key:
+                    data = data[key]
+                data = data[idx]
+            else:
+                data = data[part]
+        return json.dumps(data, indent=2, ensure_ascii=False)
+    except (KeyError, IndexError, TypeError) as e:
+        return f"ERROR: Query '{query}' failed at '{part}': {e}"
+
+
+# ---------------------------------------------------------------------------
+# Git tools
+# ---------------------------------------------------------------------------
 
 def tool_git_status() -> str:
     log.info("git_status")
@@ -444,48 +511,38 @@ def tool_git_status() -> str:
 
 
 def tool_git_commit(message: str) -> str:
-    # Sanitize commit message - strip C0/C1 control characters only.
-    # Preserve valid Unicode: accented letters (e.g. café, naïve), CJK, emoji in commit
-    # messages are valid in UTF-8 git. We only strip the 33 control chars (0x00-0x1F
-    # except TAB/LF/CR) that can break git or shell tools.
     _CONTROL = re.compile(r'[\x00-\x08\x0b\x0c\x0e-\x1f]')
     clean = _CONTROL.sub('', message)
     if clean != message:
-        replaced = sum(1 for c in message if ord(c) < 32 and c not in '\t\n\r')
-        log.warning(f"git_commit: stripped {replaced} control chars from commit message")
+        log.warning(f"git_commit: stripped control chars from message")
     message = clean
-    log.info(f"git_commit: {message!r}")
-    # Check if there are any changes to commit
+
     status_result = tool_run_command('git status --porcelain', cwd=str(WORKSPACE))
     if not status_result.strip():
-        # Nothing to commit - already committed or no changes
         return "OK: Nothing to commit (working tree clean)"
-    # Write message to temp file (Python I/O, no shell interpretation)
-    import tempfile as _tempfile
-    with _tempfile.NamedTemporaryFile(mode='w', suffix='.msg', delete=False, prefix='git_commit_') as _f:
+
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.msg', delete=False, prefix='git_commit_') as _f:
         _f.write(message)
         _msg_path = _f.name
     try:
         result = tool_run_command(f'git add -A && git commit -F {json.dumps(_msg_path)}', cwd=str(WORKSPACE))
         if 'EXIT CODE: 0' in result:
             return result
-        log.warning(f'Git commit attempt 1/3 failed, retrying in 3s...')
-        import time as _time; _time.sleep(3)
-        result = tool_run_command(f'git add -A && git commit -F {json.dumps(_msg_path)}', cwd=str(WORKSPACE))
-        if 'EXIT CODE: 0' in result:
-            return result
-        log.warning(f'Git commit attempt 2/3 failed, retrying in 3s...')
-        _time.sleep(3)
-        result = tool_run_command(f'git add -A && git commit -F {json.dumps(_msg_path)}', cwd=str(WORKSPACE))
+        import time as _time
+        for attempt in range(2):
+            _time.sleep(3)
+            result = tool_run_command(f'git add -A && git commit -F {json.dumps(_msg_path)}', cwd=str(WORKSPACE))
+            if 'EXIT CODE: 0' in result:
+                return result
         return result
     finally:
-        import os as _os
-        try: _os.unlink(_msg_path)
-        except: pass
+        try:
+            os.unlink(_msg_path)
+        except:
+            pass
 
 
 def tool_task_complete(summary: str) -> str:
-    """Signals completion - handled by ralph.py, not actually executed here."""
     log.info(f"task_complete: {summary[:100]}")
     return f"TASK_COMPLETE: {summary}"
 
@@ -495,18 +552,22 @@ def tool_task_complete(summary: str) -> str:
 # ---------------------------------------------------------------------------
 
 EXECUTORS = {
-    "read_file": lambda args: tool_read_file(args["path"]),
-    "write_file": lambda args: tool_write_file(args["path"], args["content"]),
-    "list_dir": lambda args: tool_list_dir(args["path"]),
-    "run_command": lambda args: tool_run_command(args["command"], args.get("cwd")),
-    "git_status": lambda args: tool_git_status(),
-    "git_commit": lambda args: tool_git_commit(args["message"]),
-    "task_complete": lambda args: tool_task_complete(args["summary"]),
+    "read_file":     lambda a: tool_read_file(a["path"]),
+    "write_file":    lambda a: tool_write_file(a["path"], a["content"]),
+    "copy_file":     lambda a: tool_copy_file(a["src"], a["dst"]),
+    "list_dir":      lambda a: tool_list_dir(a["path"]),
+    "search_files":  lambda a: tool_search_files(a["pattern"], a.get("path"), a.get("file_glob")),
+    "run_command":   lambda a: tool_run_command(a["command"], a.get("cwd")),
+    "run_tests":     lambda a: tool_run_tests(a.get("path"), a.get("args", "")),
+    "http_get":      lambda a: tool_http_get(a["url"], a.get("headers")),
+    "query_json":    lambda a: tool_query_json(a["path"], a["query"]),
+    "git_status":    lambda a: tool_git_status(),
+    "git_commit":    lambda a: tool_git_commit(a["message"]),
+    "task_complete": lambda a: tool_task_complete(a["summary"]),
 }
 
 
 def execute_tool(name: str, args: dict) -> str:
-    """Execute a tool by name with the given arguments. Returns string result."""
     if name not in EXECUTORS:
         return f"ERROR: Unknown tool '{name}'. Available: {list(EXECUTORS.keys())}"
     try:

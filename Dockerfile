@@ -2,8 +2,20 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install git (Ralph tools: git_status, git_commit)
-RUN apt-get update && apt-get install -y --no-install-recommends git \
+# Essential tools for a general-purpose coding agent
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
+    curl \
+    jq \
+    findutils \
+    coreutils \
+    grep \
+    sed \
+    gawk \
+    bc \
+    unzip \
+    wget \
+    vim-tiny \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .

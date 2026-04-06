@@ -1,2 +1,6 @@
 pyyaml
 requests
+web3>=6.0
+eth_account>=0.9
+psutil
+pytest>=8.0

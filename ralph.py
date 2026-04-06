@@ -629,32 +629,38 @@ def run_story_loop(story: dict, cfg: dict, log: logging.Logger, dry_run: bool = 
             except json.JSONDecodeError:
                 args = {}
 
-            # Log tool name + first 120 chars of args for visibility
-            args_preview = json.dumps(args)[:120].replace("\n", " ")
-            log.info(f"Tool call: {name} | args: {args_preview}")
+            # Log full tool call for audit trail
+            full_args_json = json.dumps(args, indent=None, ensure_ascii=False)
+            log.info(f"[TOOL_CALL] #{tool_call_count + 1} {name}")
+            log.info(f"[TOOL_CALL_ARGS] #{tool_call_count + 1} {name} | {full_args_json[:500]}")
+            if len(full_args_json) > 500:
+                log.info(f"[TOOL_CALL_ARGS_LONG] #{tool_call_count + 1} {name} | {len(full_args_json)} chars total")
 
-            # Loop detection: track this call signature
-            # Create a simple key from tool name + sorted arg keys + first 50 chars of arg values
+            # Loop detection
             arg_key = json.dumps(args, sort_keys=True)[:100]
             call_signature = (name, arg_key)
             recent_calls.append(call_signature)
             if len(recent_calls) > max_recent_calls:
                 recent_calls.pop(0)
 
-            # Check for repetition
             repetition_count = recent_calls.count(call_signature)
             if repetition_count >= repetition_threshold:
-                msg = f"LOOP DETECTED: Tool '{name}' with same arguments called {repetition_count} times in last {len(recent_calls)} calls. Stopping."
+                msg = f"LOOP DETECTED: Tool '{name}' called {repetition_count}x with same args. Stopping."
                 log.error(msg)
                 return False, msg
 
             result = execute_tool(name, args)
             result_str = str(result)
-            if len(result_str) > TOOL_RESULT_MAX_CHARS:
-                result_str = result_str[:TOOL_RESULT_MAX_CHARS] + f"\n[... truncated - {len(result_str)} chars total]"
-                log.info(f"Tool result ({name}): truncated to {TOOL_RESULT_MAX_CHARS} chars")
+            result_len = len(result_str)
+
+            if result_len > TOOL_RESULT_MAX_CHARS:
+                result_str = result_str[:TOOL_RESULT_MAX_CHARS] + f"\n[... truncated {result_len} -> {TOOL_RESULT_MAX_CHARS} chars]"
+                log.info(f"[TOOL_RESULT] #{tool_call_count + 1} {name} | TRUNCATED {result_len} -> {TOOL_RESULT_MAX_CHARS} chars")
             else:
-                log.info(f"Tool result ({name}): {result_str[:200]}")
+                log.info(f"[TOOL_RESULT] #{tool_call_count + 1} {name} | {result_len} chars")
+            log.info(f"[TOOL_RESULT_PREVIEW] #{tool_call_count + 1} {name} | {result_str[:300].replace(chr(10), ' | ')}")
+            if result_len > 300:
+                log.info(f"[TOOL_RESULT_PREVIEW_LONG] #{tool_call_count + 1} {name} | full {result_len} chars in result above")
 
             tool_results.append({
                 "role": "tool",
