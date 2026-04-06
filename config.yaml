@@ -13,11 +13,12 @@ max_attempts_per_story: 5   # Max retries before a story is marked failed
 max_tool_calls_per_story: 160 # Max tool call rounds before giving up on a story
 
 # Model generation limits
-max_tokens: 8192            # Conservative — Q6_K quantized context may be < 32K; leaves headroom
+max_tokens: 4096            # Max tokens to generate per response
 
-# Context budget (tokens, estimated at 4 chars/token)
-# Note: llama-server actual limit unknown; 36K request failed. Staying well under 32K to be safe.
-max_context_tokens: 32000   # Hard cap on prompt+history before API call
+# Context budget (tokens)
+# llama-server with --ctx-size 131072: each slot has n_ctx = 32768 tokens.
+# 28000 keeps prompt+history well under the 32K slot limit, leaving ~4K for generation.
+max_context_tokens: 28000   # Hard cap on prompt+history before API call
 max_progress_lines: 100     # Reduce to keep context lean
 max_tool_output_chars: 40000  # ~10K tokens per tool result — large files get truncated
 
