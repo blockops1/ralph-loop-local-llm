@@ -12,10 +12,11 @@
     "Telegram summary sent after each fetch run"
   ],
   "contextFiles": [
-    "base-trader/docs/PROJ-base-trader-nansen-decouple.md",
-    "base-trader/scripts/scanner.py",
-    "base-trader/data/flow_intelligence_cache.json",
-    "base-trader/data/sm_holdings_cache.json"
+    "code/fetch_nansen_flow.py",
+    "code/scanner.py",
+    "code/signal_filter.py",
+    "data/flow_intelligence_cache.json",
+    "data/sm_holdings_cache.json"
   ],
   "userStories": [
     {
