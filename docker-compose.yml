@@ -12,6 +12,8 @@ services:
       - PYTHONUNBUFFERED=1
     volumes:
       - ~/ralph/projects:/app/projects
+      - ~/.hermes/workspace:/app/workspace
+      - ~/production_apps:/app/production_apps
       - ralph-logs:/app/logs
     restart: "no"
     stdin_open: true
