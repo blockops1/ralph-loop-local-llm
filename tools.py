@@ -16,7 +16,7 @@ from pathlib import Path
 
 log = logging.getLogger("ralph.tools")
 
-WORKSPACE = Path(__file__).resolve().parent.parent
+WORKSPACE = Path(__file__).resolve().parent
 
 
 # ---------------------------------------------------------------------------
@@ -371,6 +371,7 @@ _ALLOWED_COMMANDS = {
     "curl", "wget",
     "stty", "bash", "sh", "zsh", "dash", "script",
     "pytest", "python3 -m pytest", "py.test",
+    "cd", "pwd",
 }
 
 

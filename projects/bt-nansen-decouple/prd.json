@@ -32,7 +32,11 @@
         "Skips tokens fetched within the last hour (throttle flag check)",
         "Prunes snapshots older than 30 days on each run",
         "Sends Telegram message: tokens updated count, credits used, any errors"
-      ]
+      ],
+      "_slug": "bt-nansen-decouple",
+      "attempts": 1,
+      "lastAttempt": "2026-04-06T02:00:47.461410+00:00",
+      "error": "CREATE FAILED: Model API error: 400 Client Error: Bad Request for url: http://host.docker.internal:8090/v1/chat/completions - body: {\"error\":{\"code\":400,\"message\":\"request (33356 tokens) exceeds the available contex"
     },
     {
       "id": "ND-002",

@@ -1,0 +1,17 @@
+# Ralph Progress Log - bt-nansen-decouple
+Started: 2026-04-06T01:25:10.892726
+---
+
+## [2026-04-06 01:52]
+[PIPELINE:ND-001] CREATE FAILED: Model API error: 400 Client Error: Bad Request for url: http://host.docker.internal:8090/v1/chat/completions - body: {"error":{"code":400,"message":"request (36891 tokens) exceeds the available contex
+
+## [2026-04-06 01:52]
+❌ ND-001 FAILED
+CREATE FAILED: Model API error: 400 Client Error: Bad Request for url: http://host.docker.internal:8090/v1/chat/completions - body: {"error":{"code":400,"message":"request (36891 tokens) exceeds the available contex
+
+## [2026-04-06 02:00]
+[PIPELINE:ND-001] CREATE FAILED: Model API error: 400 Client Error: Bad Request for url: http://host.docker.internal:8090/v1/chat/completions - body: {"error":{"code":400,"message":"request (33356 tokens) exceeds the available contex
+
+## [2026-04-06 02:00]
+❌ ND-001 FAILED
+CREATE FAILED: Model API error: 400 Client Error: Bad Request for url: http://host.docker.internal:8090/v1/chat/completions - body: {"error":{"code":400,"message":"request (33356 tokens) exceeds the available contex
