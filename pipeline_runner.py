@@ -156,12 +156,12 @@ def stage_critique(
         # Load critique template
         critique_template = (RALPH_DIR / "PROMPT-critique.md").read_text(encoding="utf-8")
 
-        # Build user message: pre-load PRD + file content
-        prd_json_text = json.dumps(prd, indent=2)
-        user_msg = f"""## PRD (what was supposed to be built)
+        # Build user message: pre-load current story + output file content
+        story_json_text = json.dumps(story, indent=2)
+        user_msg = f"""## Story (what was supposed to be built)
 
 ```json
-{prd_json_text}
+{story_json_text}
 ```
 
 ---
@@ -184,8 +184,8 @@ Write your critique to `critique.md` using the write_file tool.
 Only write code blocks in your response via write_file — never write code in the response text itself.
 """
         system_prompt = (
-            "You are a senior code reviewer. You are shown the PRD (what was supposed to be built) "
-            "and the actual output file. Write a critique.md that identifies what must be reworked.\n\n"
+            "You are a senior code reviewer. You are shown ONE story from the PRD (what was supposed to be built) "
+            "and the actual output file for that story. Write a critique.md that identifies what must be reworked.\n\n"
             "Your output format:\n"
             "1. First, use write_file tool to write critique.md\n"
             "2. Then call task_complete with a brief summary.\n\n"
