@@ -1,7 +1,7 @@
 # PROJ-range-calculator-v2: Range Trading Engine Overhaul
 
 **Business:** Trading competition — multi-pair, daily trades, 3-5 Aerodrome pairs
-**Status:** Phase 3 ✅ COMPLETE — Phase 4 🔲 ON DECK (multi-pair scanner integration)
+**Status:** Phase 4 ✅ COMPLETE — Phase 5 🔲 ON DECK (backtesting framework)
 
 ---
 
@@ -260,16 +260,16 @@ CoinGecko paid fallback: only if Bitquery quota exhausted or API changes signifi
 
 ---
 
-## Phase 4 — Multi-Pair Scanner Integration 🔲 PENDING
+## Phase 4 — Multi-Pair Scanner Integration ✅ COMPLETE
 
 **Goal:** Extend the existing scanner to use the new engine across 3-5 pairs.
 
 ### Steps
-1. [ ] Audit `range_scanner.py` — understand current pair scanning logic
-2. [ ] Add new pairs to scanner config: WETH/USDC, AERO/USDC, ZEN/WETH, cbBTC/WETH, VFY/USDC
-3. [ ] Wire new `range_engine.py` into scanner — parallel run with v1, log both
-4. [ ] Add liquidity filter: skip pair if TVL < threshold (per-pair thresholds)
-5. [ ] Commit: `feat: multi-pair range scanner`
+1. [x] Audit `range_scanner.py` — understand current pair scanning logic
+2. [x] Add new pairs to scanner config: WETH/USDC, AERO/USDC, ZEN/WETH, cbBTC/WETH, VFY/USDC
+3. [x] Wire new `range_engine.py` into scanner — parallel run with v1, log both
+4. [x] Add liquidity filter: skip pair if TVL < threshold (per-pair thresholds)
+5. [x] Commit: `feat: multi-pair range scanner`
 
 ---
 
