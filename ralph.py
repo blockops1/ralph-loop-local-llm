@@ -79,7 +79,7 @@ def load_config() -> dict:
 # Context builder
 # ---------------------------------------------------------------------------
 
-def build_system_prompt(story: dict, progress: str, agents_md: str) -> str:
+def build_system_prompt(story: dict, progress: str, agents_md: str, slug: str = "") -> str:
     """Fill PROMPT.md or PROMPT-rework.md template with story, progress, and AGENTS.md content."""
     # Determine which prompt template to use based on story type
     story_type = story.get("type", "create")  # default to 'create' if not specified
@@ -145,7 +145,9 @@ def build_system_prompt(story: dict, progress: str, agents_md: str) -> str:
         if desired_behavior:
             rework_info += f"\n- **desired_behavior:** {desired_behavior}\n"
 
-    story_block = f"""**Story ID:** {story['id']}
+    story_block = f"""**Project slug:** {slug}
+**Project directory:** /app/projects/{slug}
+**Story ID:** {story['id']}
 **Title:** {story['title']}
 **Description:** {story.get('description', '')}{rework_info}
 
@@ -494,7 +496,7 @@ def run_story_loop(story: dict, cfg: dict, log: logging.Logger, dry_run: bool = 
     if agents_path.exists():
         agents_md = agents_path.read_text(encoding="utf-8")
 
-    system_prompt = build_system_prompt(story, progress, agents_md)
+    system_prompt = build_system_prompt(story, progress, agents_md, slug)
 
     token_estimate = estimate_tokens(system_prompt)
     log.info(f"System prompt: ~{token_estimate} tokens")
