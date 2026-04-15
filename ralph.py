@@ -113,6 +113,16 @@ def build_system_prompt(story: dict, progress: str, agents_md: str) -> str:
     else:
         context_files_section = "(none specified - use list_dir to explore)"
 
+    # Add explicit reminder to use full paths from contextFiles
+    if context_file_list:
+        path_reminder = "\n".join(f"  - {cf}" for cf in context_file_list)
+        context_files_section += (
+            "\n\n**IMPORTANT:** When calling tools that take file paths "
+            "(read_file, write_file, copy_file, run_command), you MUST use the FULL "
+            "absolute paths listed above (e.g. /app/projects/rt-range-engine/code/"
+            "support_resistance.py). NEVER use bare filenames — always include the full path."
+        )
+
     # Add rework-specific fields if present
     rework_info = ""
     if story_type == "rework":
