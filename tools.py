@@ -265,6 +265,9 @@ def tool_write_file(path: str, content: str) -> str:
                 f"Do NOT write truncated content. Re-read the file to get the complete content."
             )
     resolved = _resolve_path(path)
+    # Reject bare filenames
+    if "/" not in path and "\\" not in path:
+        return f"ERROR: Use a full path with at least one directory level (e.g. projects/rt-range-engine/code/{path}). Bare filenames not allowed."
     sanitized, replaced = _sanitize_for_python(content, str(resolved))
     if replaced:
         log.warning(f"write_file: sanitized {replaced} non-ASCII chars from {resolved.name}")
@@ -282,13 +285,16 @@ def tool_write_file(path: str, content: str) -> str:
 
 def tool_copy_file(src: str, dst: str) -> str:
     """Copy src to dst. dst's parent dir is created if needed."""
+    import shutil
     src_p = _resolve_path(src)
     dst_p = _resolve_path(dst)
+    # Reject bare filenames that would resolve to /app/<name>
+    if "/" not in dst and "\\" not in dst:
+        return f"ERROR: Use a full path with at least one directory level (e.g. projects/rt-range-engine/code/{dst}). Bare filenames not allowed."
     if not src_p.exists():
         return f"ERROR: Source not found: {src_p}"
     log.info(f"copy_file: {src_p} -> {dst_p}")
     try:
-        import shutil
         dst_p.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(src_p, dst_p)
         return f"OK: Copied {src} -> {dst}"
