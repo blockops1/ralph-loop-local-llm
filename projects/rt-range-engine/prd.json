@@ -4,8 +4,8 @@
   "branchName": "ralph/rt-range-engine",
   "description": "Phase 3 of PROJ-range-calculator-v2: implement range_engine.py - a BB+ATR+ADX hybrid range calculation engine. Replaces simple swing-point average in support_resistance.py with statistical bands, trend regime filtering, and cost-adjusted width floors. Runs parallel to v1, does not replace it until validated. Data source: range_data.py (CoinGecko).",
   "contextFiles": [
-    "/app/projects/references/range-engine-spec.md",
-    "/app/projects/PROJ-range-calculator-v2.md"
+    "references/range-engine-spec.md",
+    "PROJ-range-calculator-v2.md"
   ],
   "qualityChecks": [
     "python3 -m py_compile /app/projects/rt-range-engine/code/range_engine.py",
@@ -17,12 +17,12 @@
       "id": "US-001",
       "title": "Snapshot support_resistance.py to support_resistance_v1.py",
       "type": "create",
-      "description": "Current state: scripts/support_resistance.py exists and is used by the pipeline. It contains the simple swing-point average S/R logic (v1).\n\nWhat to build: Copy it to support_resistance_v1.py to preserve the original v1 behavior. This is a preservation copy, not a modification.\n\nRalph should: read /app/projects/rt-range-engine/code/support_resistance.py, then write the exact same content to /app/projects/rt-range-engine/code/support_resistance_v1.py.\n\nDo NOT modify support_resistance.py in this story. This is only a backup step to protect v1 before we build the parallel engine.",
+      "description": "Copy projects/rt-range-engine/code/support_resistance.py to projects/rt-range-engine/code/support_resistance_v1.py.\n\nIMPORTANT: The source file content is ALREADY PRE-LOADED in the Context Files section above. DO NOT call read_file or search_files. Use write_file with the pre-loaded content to create the new file.",
       "target_file": "/app/projects/rt-range-engine/code/support_resistance_v1.py",
       "output_file": "/app/projects/rt-range-engine/code/support_resistance_v1.py",
       "preserve": [],
       "contextFiles": [
-        "/app/projects/rt-range-engine/code/support_resistance.py"
+        "projects/rt-range-engine/code/support_resistance.py"
       ],
       "acceptanceCriteria": [
         "test -f /app/projects/rt-range-engine/code/support_resistance_v1.py && echo 'FILE_EXISTS'",
@@ -46,7 +46,7 @@
       "output_file": "/app/projects/rt-range-engine/code/range_engine_config.py",
       "preserve": [],
       "contextFiles": [
-        "/app/projects/references/range-engine-spec.md"
+        "references/range-engine-spec.md"
       ],
       "acceptanceCriteria": [
         "python3 -c \"import sys; sys.path.insert(0,'/app/projects/rt-range-engine/code'); from range_engine_config import PER_PAIR_CONFIG; assert 'WETH/USDC' in PER_PAIR_CONFIG; assert 'min_width' in PER_PAIR_CONFIG['WETH/USDC']; print('OK')\""
@@ -69,8 +69,8 @@
       "output_file": "/app/projects/rt-range-engine/code/test_range_engine.py",
       "preserve": [],
       "contextFiles": [
-        "/app/projects/references/range-engine-spec.md",
-        "/app/projects/rt-range-engine/code/range_engine_config.py"
+        "references/range-engine-spec.md",
+        "projects/rt-range-engine/code/range_engine_config.py"
       ],
       "acceptanceCriteria": [
         "python3 -m py_compile /app/projects/rt-range-engine/code/test_range_engine.py",
@@ -94,9 +94,9 @@
       "output_file": "/app/projects/rt-range-engine/code/range_engine.py",
       "preserve": [],
       "contextFiles": [
-        "/app/projects/references/range-engine-spec.md",
-        "/app/projects/rt-range-engine/code/range_engine_config.py",
-        "/app/projects/rt-range-engine/code/test_range_engine.py"
+        "references/range-engine-spec.md",
+        "projects/rt-range-engine/code/range_engine_config.py",
+        "projects/rt-range-engine/code/test_range_engine.py"
       ],
       "acceptanceCriteria": [
         "python3 -m py_compile /app/projects/rt-range-engine/code/range_engine.py",
