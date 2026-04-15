@@ -1,7 +1,7 @@
 # PROJ-range-calculator-v2: Range Trading Engine Overhaul
 
 **Business:** Trading competition — multi-pair, daily trades, 3-5 Aerodrome pairs
-**Status:** Phase 2 ✅ COMPLETE — Phase 3 🔲 ON DECK (range engine implementation)
+**Status:** Phase 3 ✅ COMPLETE — Phase 4 🔲 ON DECK (multi-pair scanner integration)
 
 ---
 
@@ -241,22 +241,22 @@ CoinGecko paid fallback: only if Bitquery quota exhausted or API changes signifi
 
 ---
 
-## Phase 3 — Implement Range Engine 🔲 PENDING
+## Phase 3 — Implement Range Engine ✅ COMPLETE
 
 **Goal:** Build the new engine alongside existing code (no replace until tested).
 
 ### Steps
-1. [ ] Snapshot existing `support_resistance.py` to `support_resistance_v1.py` (preserve old logic)
-2. [ ] Create `range_engine.py`:
+1. [x] Snapshot existing `support_resistance.py` to `support_resistance_v1.py` (preserve old logic)
+2. [x] Create `range_engine.py`:
       - `calculate_bb_sr()` — Bollinger Bands S/R
       - `calculate_atr()` — ATR calculation
       - `calculate_adx()` — ADX regime filter
       - `get_range()` — hybrid orchestrator returning S/R, regime, quality score
       - `calculate_min_width()` — cost-adjusted floor per pair
       - `get_entry_exit()` — entry/exit/target/stop per current regime
-3. [ ] Create `range_engine_config.py` — per-pair parameter sets
-4. [ ] Create `test_range_engine.py` — unit tests for all functions
-5. [ ] Commit: `feat: range engine v2 core`
+3. [x] Create `range_engine_config.py` — per-pair parameter sets
+4. [x] Create `test_range_engine.py` — unit tests for all functions
+5. [x] Commit: `feat: range engine v2 core`
 
 ---
 
