@@ -14,5 +14,9 @@
 ## [2026-04-15 18:27]
 [PIPELINE:US-004] ALL 3 STAGES DONE | output=/app/projects/rt-range-engine/code/range_engine.py
 
-## [2026-04-15 18:27]
-✅ US-004 PIPELINE DONE: 3-stage pipeline complete: /app/projects/rt-range-engine/code/range_engine.py
+## [2026-04-15 19:50]
+Phase 4 complete: multi_pair_scanner.py — scans 5 pairs with v1+v2 parallel signals
+- TVL liquidity filter (per-pair thresholds)
+- CoinGecko 1h + 4h candle fetching via range_data.py
+- Both v1 (support_resistance) and v2 (range_engine) signals logged
+- No CoinGecko API key — data fetch requires key to be added to .env
