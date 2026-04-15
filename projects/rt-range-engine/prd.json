@@ -4,8 +4,8 @@
   "branchName": "ralph/rt-range-engine",
   "description": "Phase 3 of PROJ-range-calculator-v2: implement range_engine.py - a BB+ATR+ADX hybrid range calculation engine. Replaces simple swing-point average in support_resistance.py with statistical bands, trend regime filtering, and cost-adjusted width floors. Runs parallel to v1, does not replace it until validated. Data source: range_data.py (CoinGecko).",
   "contextFiles": [
-    "references/range-engine-spec.md",
-    "PROJ-range-calculator-v2.md"
+    "projects/references/range-engine-spec.md",
+    "projects/PROJ-range-calculator-v2.md"
   ],
   "qualityChecks": [
     "python3 -m py_compile /app/projects/rt-range-engine/code/range_engine.py",
@@ -32,8 +32,8 @@
         "python3 -m py_compile /app/projects/rt-range-engine/code/support_resistance_v1.py"
       ],
       "priority": 1,
-      "passes": false,
-      "attempts": 0,
+      "passes": true,
+      "attempts": 1,
       "dependsOn": [],
       "dependencyPolicy": "block"
     },
@@ -49,14 +49,14 @@
         "references/range-engine-spec.md"
       ],
       "acceptanceCriteria": [
-        "python3 -c \"import sys; sys.path.insert(0,'/app/projects/rt-range-engine/code'); from range_engine_config import PER_PAIR_CONFIG; assert 'WETH/USDC' in PER_PAIR_CONFIG; assert 'min_width' in PER_PAIR_CONFIG['WETH/USDC']; print('OK')\""
+        "python3 -c \"import sys; sys.path.insert(0,'/app/projects/rt-range-engine/code'); from range_engine_config import PER_PAIR_CONFIG; from dataclasses import is_dataclass; assert 'WETH/USDC' in PER_PAIR_CONFIG; cfg = PER_PAIR_CONFIG['WETH/USDC']; assert hasattr(cfg, 'min_width') and hasattr(cfg, 'fee_rate'); print('OK')\""
       ],
       "qualityChecks": [
         "python3 -m py_compile /app/projects/rt-range-engine/code/range_engine_config.py"
       ],
       "priority": 2,
-      "passes": false,
-      "attempts": 0,
+      "passes": true,
+      "attempts": 1,
       "dependsOn": [],
       "dependencyPolicy": "block"
     },
@@ -80,10 +80,14 @@
         "python3 -m py_compile /app/projects/rt-range-engine/code/test_range_engine.py"
       ],
       "priority": 3,
-      "passes": false,
+      "passes": true,
       "attempts": 0,
-      "dependsOn": ["US-002"],
-      "dependencyPolicy": "block"
+      "dependsOn": [
+        "US-002"
+      ],
+      "dependencyPolicy": "block",
+      "_slug": "rt-range-engine",
+      "notes": "3-stage pipeline complete: /app/projects/rt-range-engine/code/test_range_engine.py"
     },
     {
       "id": "US-004",
@@ -106,10 +110,14 @@
         "python3 -m py_compile /app/projects/rt-range-engine/code/range_engine.py"
       ],
       "priority": 4,
-      "passes": false,
+      "passes": true,
       "attempts": 0,
-      "dependsOn": ["US-003"],
-      "dependencyPolicy": "block"
+      "dependsOn": [
+        "US-003"
+      ],
+      "dependencyPolicy": "block",
+      "_slug": "rt-range-engine",
+      "notes": "3-stage pipeline complete: /app/projects/rt-range-engine/code/range_engine.py"
     }
   ]
 }
