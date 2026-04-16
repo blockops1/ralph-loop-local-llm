@@ -22,14 +22,15 @@
         "test -f /data/military-documents/bm25_index.pkl"
       ],
       "priority": 1,
-      "passes": false,
+      "passes": true,
       "attempts": 0,
       "dependsOn": [],
       "dependencyPolicy": "block",
       "contextFiles": [
         "/app/zk-rag-v2/pipeline_g/pipeline_g.py"
       ],
-      "_slug": "rag-query-api"
+      "_slug": "rag-query-api",
+      "notes": "3-stage pipeline complete: /app/zk-rag-v2/pipeline_g/pipeline_g.py"
     },
     {
       "id": "US-002",

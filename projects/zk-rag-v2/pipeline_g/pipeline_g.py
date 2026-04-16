@@ -22,6 +22,7 @@ Exit codes:
 import argparse
 import json
 import pickle
+import re
 import sys
 import time
 import uuid
@@ -400,43 +401,42 @@ def apply_ingested_update(registry_entry: dict, chunk_count: int) -> None:
 
 # ── BM25 Index Helpers ────────────────────────────────────────────────────────
 
+def tokenize_text(text: str) -> list[str]:
+    """Simple tokenization: lowercase and split on word boundaries."""
+    text = text.lower()
+    tokens = re.findall(r'\b\w+\b', text)
+    return tokens
+
+
 def load_bm25_index(index_path: Path) -> dict:
     """
     Load existing BM25 index from pickle file.
     
     Returns dict with:
-        - 'corpus': list of tokenized documents (list of lists of tokens)
-        - 'bm25': BM25Okapi model
-        - 'doc_id_to_idx': mapping from doc_id to corpus index
+        - 'bm25': BM25Okapi instance
+        - 'chunk_ids': list of chunk_id strings aligned with BM25 corpus
+        - 'doc_ids': list of doc_id strings (one per chunk)
     """
     if not index_path.exists():
         return {
-            "corpus": [],
             "bm25": None,
-            "doc_id_to_idx": {},
+            "chunk_ids": [],
+            "doc_ids": [],
         }
     
     with open(index_path, "rb") as f:
         return pickle.load(f)
 
 
-def save_bm25_index(index_path: Path, corpus: list, bm25_model, doc_id_to_idx: dict) -> None:
+def save_bm25_index(index_path: Path, bm25_model, chunk_ids: list, doc_ids: list) -> None:
     """Save BM25 index to pickle file."""
     index_data = {
-        "corpus": corpus,
         "bm25": bm25_model,
-        "doc_id_to_idx": doc_id_to_idx,
+        "chunk_ids": chunk_ids,
+        "doc_ids": doc_ids,
     }
     with open(index_path, "wb") as f:
         pickle.dump(index_data, f)
-
-
-def tokenize_text(text: str) -> list[str]:
-    """Simple tokenization: lowercase and split on whitespace/punctuation."""
-    import re
-    text = text.lower()
-    tokens = re.findall(r'\b\w+\b', text)
-    return tokens
 
 
 def build_bm25_index_incremental(
@@ -447,18 +447,14 @@ def build_bm25_index_incremental(
     """
     Build BM25 index incrementally for newly ingested documents.
     
-    Loads existing index, appends new documents, and saves updated index.
-    Each document's chunks are concatenated into a single text for indexing.
+    Loads existing index, appends new chunks, and saves updated index.
+    Each chunk is indexed separately (not concatenated by document).
+    
+    chunk_id format: '{doc_id}-{chunk_index}' (e.g. '0a21e769...-0')
     """
     if not ingested_doc_ids:
         print("No documents to add to BM25 index")
         return
-    
-    # Load existing index
-    index_data = load_bm25_index(index_path)
-    corpus = index_data["corpus"]
-    bm25_model = index_data["bm25"]
-    doc_id_to_idx = index_data["doc_id_to_idx"]
     
     # Import rank_bm25 here to avoid import if not needed
     try:
@@ -468,8 +464,15 @@ def build_bm25_index_incremental(
         print("Install with: pip install rank_bm25")
         return
     
-    # Add new documents to corpus
+    # Load existing index
+    index_data = load_bm25_index(index_path)
+    existing_chunk_ids = set(index_data["chunk_ids"])
+    
+    # Collect new chunks from ingested documents
     new_corpus = []
+    new_chunk_ids = []
+    new_doc_ids = []
+    
     for doc_id in ingested_doc_ids:
         chunks_path = chunks_dir / doc_id / "chunks.jsonl"
         if not chunks_path.exists():
@@ -479,27 +482,54 @@ def build_bm25_index_incremental(
         # Load all chunks for this document
         chunks = load_chunks(chunks_path)
         
-        # Concatenate all chunk texts for this document
-        doc_text = " ".join(chunk.get("text", "") for chunk in chunks)
-        
-        # Tokenize and add to new corpus
-        tokens = tokenize_text(doc_text)
-        new_corpus.append(tokens)
-        
-        # Update doc_id_to_idx mapping
-        doc_id_to_idx[doc_id] = len(corpus) + len(new_corpus) - 1
+        for chunk in chunks:
+            chunk_id = chunk["chunk_id"]
+            
+            # Skip if already indexed
+            if chunk_id in existing_chunk_ids:
+                continue
+            
+            # Tokenize chunk text and add to new corpus
+            chunk_text = chunk.get("text", "")
+            tokens = tokenize_text(chunk_text)
+            new_corpus.append(tokens)
+            new_chunk_ids.append(chunk_id)
+            new_doc_ids.append(doc_id)
     
-    # Append new documents to corpus
-    corpus.extend(new_corpus)
+    if not new_corpus:
+        print("No new chunks to add to BM25 index (all already indexed)")
+        return
     
-    # Rebuild BM25 model with updated corpus
-    if corpus:
-        bm25_model = BM25Okapi(corpus)
+    # Append new chunks to existing index data
+    all_chunk_ids = index_data["chunk_ids"] + new_chunk_ids
+    all_doc_ids = index_data["doc_ids"] + new_doc_ids
+    
+    # Build full corpus for BM25
+    # Need to reload existing corpus from chunks since we only stored IDs
+    full_corpus = []
+    existing_chunk_ids_set = set(index_data["chunk_ids"])
+    
+    # Rebuild corpus from existing chunk_ids
+    for existing_chunk_id in index_data["chunk_ids"]:
+        doc_id = existing_chunk_id.rsplit("-", 1)[0]  # Extract doc_id from chunk_id
+        chunks_path = chunks_dir / doc_id / "chunks.jsonl"
+        if chunks_path.exists():
+            chunks = load_chunks(chunks_path)
+            for chunk in chunks:
+                if chunk["chunk_id"] == existing_chunk_id:
+                    full_corpus.append(tokenize_text(chunk.get("text", "")))
+                    break
+    
+    # Add new corpus
+    full_corpus.extend(new_corpus)
+    
+    # Rebuild BM25 model with full corpus
+    bm25_model = BM25Okapi(full_corpus)
     
     # Save updated index
-    save_bm25_index(index_path, corpus, bm25_model, doc_id_to_idx)
+    save_bm25_index(index_path, bm25_model, all_chunk_ids, all_doc_ids)
     
-    print(f"BM25 index updated: {len(corpus)} documents indexed")
+    print(f"BM25 index updated: {len(all_chunk_ids)} chunks indexed ({len(new_chunk_ids)} new)")
 
 
 # ── Main ─────────────────────────────────────────────────────────────────────
