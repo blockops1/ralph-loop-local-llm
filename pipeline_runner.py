@@ -303,9 +303,9 @@ def pipeline_for_story(
     slug = story.get("_slug", "")
     story_id = story["id"]
 
-    # Primary output file = first contextFile
-    context_files = story.get("contextFiles", [])
-    output_file = context_files[0] if context_files else f"projects/{slug}/output.txt"
+    # Primary output file = target_file (what we're building), falling back to first contextFile
+    context_file_list = story.get("contextFiles", [])
+    output_file = story.get("target_file", context_file_list[0] if context_file_list else "")
 
     log.info(f"[PIPELINE:{story_id}] 3-stage pipeline starting | output={output_file}")
 

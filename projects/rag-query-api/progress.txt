@@ -1,0 +1,145 @@
+# Ralph Progress Log — rag-query-api
+Started: 2026-04-16T17:00:00.957994
+---
+
+## [2026-04-16 22:42]
+[PIPELINE:US-001] CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NewConnectionError("HTTPConnection(host='host.docker.interna
+
+## [2026-04-16 22:42]
+❌ US-001 FAILED
+CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NewConnectionError("HTTPConnection(host='host.docker.interna
+
+## [2026-04-16 22:42]
+[PIPELINE:US-001] CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NewConnectionError("HTTPConnection(host='host.docker.interna
+
+## [2026-04-16 22:42]
+❌ US-001 FAILED
+CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NewConnectionError("HTTPConnection(host='host.docker.interna
+
+## [2026-04-16 22:42]
+[PIPELINE:US-001] CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NewConnectionError("HTTPConnection(host='host.docker.interna
+
+## [2026-04-16 22:42]
+❌ US-001 FAILED
+CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NewConnectionError("HTTPConnection(host='host.docker.interna
+
+## [2026-04-16 22:42]
+[PIPELINE:US-001] CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NewConnectionError("HTTPConnection(host='host.docker.interna
+
+## [2026-04-16 22:42]
+❌ US-001 FAILED
+CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NewConnectionError("HTTPConnection(host='host.docker.interna
+
+## [2026-04-16 22:42]
+[PIPELINE:US-001] CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NewConnectionError("HTTPConnection(host='host.docker.interna
+
+## [2026-04-16 22:42]
+❌ US-001 FAILED
+CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NewConnectionError("HTTPConnection(host='host.docker.interna
+
+## [2026-04-16 22:42]
+[PIPELINE:US-002] CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NewConnectionError("HTTPConnection(host='host.docker.interna
+
+## [2026-04-16 22:42]
+❌ US-002 FAILED
+CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NewConnectionError("HTTPConnection(host='host.docker.interna
+
+## [2026-04-16 22:42]
+[PIPELINE:US-002] CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NewConnectionError("HTTPConnection(host='host.docker.interna
+
+## [2026-04-16 22:42]
+❌ US-002 FAILED
+CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NewConnectionError("HTTPConnection(host='host.docker.interna
+
+## [2026-04-16 22:42]
+[PIPELINE:US-002] CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NewConnectionError("HTTPConnection(host='host.docker.interna
+
+## [2026-04-16 22:42]
+❌ US-002 FAILED
+CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NewConnectionError("HTTPConnection(host='host.docker.interna
+
+## [2026-04-16 22:42]
+[PIPELINE:US-002] CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NewConnectionError("HTTPConnection(host='host.docker.interna
+
+## [2026-04-16 22:42]
+❌ US-002 FAILED
+CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NewConnectionError("HTTPConnection(host='host.docker.interna
+
+## [2026-04-16 22:42]
+[PIPELINE:US-002] CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NewConnectionError("HTTPConnection(host='host.docker.interna
+
+## [2026-04-16 22:42]
+❌ US-002 FAILED
+CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NewConnectionError("HTTPConnection(host='host.docker.interna
+
+## [2026-04-16 18:56]
+[PIPELINE:US-001] CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NameResolutionError("HTTPConnection(host='host.docker.intern
+
+## [2026-04-16 18:56]
+❌ US-001 PIPELINE FAILED: CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NameResolutionError("HTTPConnection(host='hos
+
+## [2026-04-16 18:56]
+[PIPELINE:US-001] CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NameResolutionError("HTTPConnection(host='host.docker.intern
+
+## [2026-04-16 18:56]
+❌ US-001 PIPELINE FAILED: CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NameResolutionError("HTTPConnection(host='hos
+
+## [2026-04-16 18:56]
+[PIPELINE:US-001] CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NameResolutionError("HTTPConnection(host='host.docker.intern
+
+## [2026-04-16 18:56]
+❌ US-001 PIPELINE FAILED: CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NameResolutionError("HTTPConnection(host='hos
+
+## [2026-04-16 18:56]
+[PIPELINE:US-002] CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NameResolutionError("HTTPConnection(host='host.docker.intern
+
+## [2026-04-16 18:56]
+❌ US-002 PIPELINE FAILED: CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NameResolutionError("HTTPConnection(host='hos
+
+## [2026-04-16 18:56]
+[PIPELINE:US-002] CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NameResolutionError("HTTPConnection(host='host.docker.intern
+
+## [2026-04-16 18:56]
+❌ US-002 PIPELINE FAILED: CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NameResolutionError("HTTPConnection(host='hos
+
+## [2026-04-16 18:56]
+[PIPELINE:US-002] CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NameResolutionError("HTTPConnection(host='host.docker.intern
+
+## [2026-04-16 18:56]
+❌ US-002 PIPELINE FAILED: CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NameResolutionError("HTTPConnection(host='hos
+
+## [2026-04-16 18:57]
+[PIPELINE:US-001] CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NameResolutionError("HTTPConnection(host='host.docker.intern
+
+## [2026-04-16 18:57]
+❌ US-001 PIPELINE FAILED: CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NameResolutionError("HTTPConnection(host='hos
+
+## [2026-04-16 18:57]
+[PIPELINE:US-001] CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NameResolutionError("HTTPConnection(host='host.docker.intern
+
+## [2026-04-16 18:57]
+❌ US-001 PIPELINE FAILED: CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NameResolutionError("HTTPConnection(host='hos
+
+## [2026-04-16 18:57]
+[PIPELINE:US-001] CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NameResolutionError("HTTPConnection(host='host.docker.intern
+
+## [2026-04-16 18:57]
+❌ US-001 PIPELINE FAILED: CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NameResolutionError("HTTPConnection(host='hos
+
+## [2026-04-16 18:57]
+[PIPELINE:US-002] CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NameResolutionError("HTTPConnection(host='host.docker.intern
+
+## [2026-04-16 18:57]
+❌ US-002 PIPELINE FAILED: CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NameResolutionError("HTTPConnection(host='hos
+
+## [2026-04-16 18:57]
+[PIPELINE:US-002] CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NameResolutionError("HTTPConnection(host='host.docker.intern
+
+## [2026-04-16 18:57]
+❌ US-002 PIPELINE FAILED: CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NameResolutionError("HTTPConnection(host='hos
+
+## [2026-04-16 18:57]
+[PIPELINE:US-002] CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NameResolutionError("HTTPConnection(host='host.docker.intern
+
+## [2026-04-16 18:57]
+❌ US-002 PIPELINE FAILED: CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NameResolutionError("HTTPConnection(host='hos

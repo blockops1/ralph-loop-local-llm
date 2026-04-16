@@ -1,0 +1,75 @@
+2026-04-16 18:56:08,945 INFO === Ralph 3-Stage Pipeline started | slug=rag-query-api | model=Qwen3.5-27B-Q6_K.gguf | 2026-04-16T185608 ===
+2026-04-16 18:56:08,945 INFO [PIPELINE:US-001] 3-stage pipeline starting | output=/app/zk-rag-v2/pipeline_g/pipeline_g.py
+2026-04-16 18:56:08,945 INFO [CREATE:US-001] starting (model=Qwen3.5-27B-Q6_K.gguf)
+2026-04-16 18:56:08,946 INFO System prompt: ~740 tokens
+2026-04-16 18:56:08,946 INFO Starting agentic loop for US-001: Add BM25 index build to Pipeline G
+2026-04-16 18:56:08,946 INFO Model call #1 (messages=2, elapsed=0s)
+2026-04-16 18:56:08,963 ERROR Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NameResolutionError("HTTPConnection(host='host.docker.internal', port=8090): Failed to resolve 'host.docker.internal' ([Errno 8] nodename nor servname provided, or not known)"))
+2026-04-16 18:56:08,964 INFO [CREATE:US-001] done — ok=False
+2026-04-16 18:56:08,964 INFO Appended to progress.txt for 'rag-query-api'
+2026-04-16 18:56:08,964 INFO Story US-001 attempt 1 FAILED: CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', 
+2026-04-16 18:56:08,964 INFO Saved prd.json for 'rag-query-api'
+2026-04-16 18:56:08,964 INFO Appended to progress.txt for 'rag-query-api'
+2026-04-16 18:56:08,964 ERROR ❌ US-001 failed: CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NameResolutionError("HTTPConnection(host='hos
+2026-04-16 18:56:09,507 INFO [PIPELINE:US-001] 3-stage pipeline starting | output=/app/zk-rag-v2/pipeline_g/pipeline_g.py
+2026-04-16 18:56:09,507 INFO [CREATE:US-001] starting (model=Qwen3.5-27B-Q6_K.gguf)
+2026-04-16 18:56:09,508 INFO System prompt: ~740 tokens
+2026-04-16 18:56:09,509 INFO Starting agentic loop for US-001: Add BM25 index build to Pipeline G
+2026-04-16 18:56:09,509 INFO Model call #1 (messages=2, elapsed=0s)
+2026-04-16 18:56:09,517 ERROR Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NameResolutionError("HTTPConnection(host='host.docker.internal', port=8090): Failed to resolve 'host.docker.internal' ([Errno 8] nodename nor servname provided, or not known)"))
+2026-04-16 18:56:09,517 INFO [CREATE:US-001] done — ok=False
+2026-04-16 18:56:09,518 INFO Appended to progress.txt for 'rag-query-api'
+2026-04-16 18:56:09,518 INFO Story US-001 attempt 2 FAILED: CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', 
+2026-04-16 18:56:09,520 INFO Saved prd.json for 'rag-query-api'
+2026-04-16 18:56:09,521 INFO Appended to progress.txt for 'rag-query-api'
+2026-04-16 18:56:09,521 ERROR ❌ US-001 failed: CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NameResolutionError("HTTPConnection(host='hos
+2026-04-16 18:56:09,711 INFO [PIPELINE:US-001] 3-stage pipeline starting | output=/app/zk-rag-v2/pipeline_g/pipeline_g.py
+2026-04-16 18:56:09,711 INFO [CREATE:US-001] starting (model=Qwen3.5-27B-Q6_K.gguf)
+2026-04-16 18:56:09,713 INFO System prompt: ~740 tokens
+2026-04-16 18:56:09,713 INFO Starting agentic loop for US-001: Add BM25 index build to Pipeline G
+2026-04-16 18:56:09,713 INFO Model call #1 (messages=2, elapsed=0s)
+2026-04-16 18:56:09,720 ERROR Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NameResolutionError("HTTPConnection(host='host.docker.internal', port=8090): Failed to resolve 'host.docker.internal' ([Errno 8] nodename nor servname provided, or not known)"))
+2026-04-16 18:56:09,720 INFO [CREATE:US-001] done — ok=False
+2026-04-16 18:56:09,721 INFO Appended to progress.txt for 'rag-query-api'
+2026-04-16 18:56:09,721 INFO Story US-001 attempt 3 FAILED: CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', 
+2026-04-16 18:56:09,723 INFO Saved prd.json for 'rag-query-api'
+2026-04-16 18:56:09,723 INFO Appended to progress.txt for 'rag-query-api'
+2026-04-16 18:56:09,723 ERROR ❌ US-001 failed: CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NameResolutionError("HTTPConnection(host='hos
+2026-04-16 18:56:09,935 INFO [PIPELINE:US-002] 3-stage pipeline starting | output=
+2026-04-16 18:56:09,935 INFO [CREATE:US-002] starting (model=Qwen3.5-27B-Q6_K.gguf)
+2026-04-16 18:56:09,936 INFO System prompt: ~740 tokens
+2026-04-16 18:56:09,936 INFO Starting agentic loop for US-002: Create api_server/ project structure and __init__.py
+2026-04-16 18:56:09,937 INFO Model call #1 (messages=2, elapsed=0s)
+2026-04-16 18:56:09,944 ERROR Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NameResolutionError("HTTPConnection(host='host.docker.internal', port=8090): Failed to resolve 'host.docker.internal' ([Errno 8] nodename nor servname provided, or not known)"))
+2026-04-16 18:56:09,944 INFO [CREATE:US-002] done — ok=False
+2026-04-16 18:56:09,945 INFO Appended to progress.txt for 'rag-query-api'
+2026-04-16 18:56:09,945 INFO Story US-002 attempt 1 FAILED: CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', 
+2026-04-16 18:56:09,947 INFO Saved prd.json for 'rag-query-api'
+2026-04-16 18:56:09,948 INFO Appended to progress.txt for 'rag-query-api'
+2026-04-16 18:56:09,948 ERROR ❌ US-002 failed: CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NameResolutionError("HTTPConnection(host='hos
+2026-04-16 18:56:10,205 INFO [PIPELINE:US-002] 3-stage pipeline starting | output=
+2026-04-16 18:56:10,205 INFO [CREATE:US-002] starting (model=Qwen3.5-27B-Q6_K.gguf)
+2026-04-16 18:56:10,206 INFO System prompt: ~740 tokens
+2026-04-16 18:56:10,206 INFO Starting agentic loop for US-002: Create api_server/ project structure and __init__.py
+2026-04-16 18:56:10,207 INFO Model call #1 (messages=2, elapsed=0s)
+2026-04-16 18:56:10,216 ERROR Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NameResolutionError("HTTPConnection(host='host.docker.internal', port=8090): Failed to resolve 'host.docker.internal' ([Errno 8] nodename nor servname provided, or not known)"))
+2026-04-16 18:56:10,216 INFO [CREATE:US-002] done — ok=False
+2026-04-16 18:56:10,217 INFO Appended to progress.txt for 'rag-query-api'
+2026-04-16 18:56:10,217 INFO Story US-002 attempt 2 FAILED: CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', 
+2026-04-16 18:56:10,220 INFO Saved prd.json for 'rag-query-api'
+2026-04-16 18:56:10,221 INFO Appended to progress.txt for 'rag-query-api'
+2026-04-16 18:56:10,221 ERROR ❌ US-002 failed: CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NameResolutionError("HTTPConnection(host='hos
+2026-04-16 18:56:10,445 INFO [PIPELINE:US-002] 3-stage pipeline starting | output=
+2026-04-16 18:56:10,446 INFO [CREATE:US-002] starting (model=Qwen3.5-27B-Q6_K.gguf)
+2026-04-16 18:56:10,447 INFO System prompt: ~740 tokens
+2026-04-16 18:56:10,448 INFO Starting agentic loop for US-002: Create api_server/ project structure and __init__.py
+2026-04-16 18:56:10,448 INFO Model call #1 (messages=2, elapsed=0s)
+2026-04-16 18:56:10,457 ERROR Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NameResolutionError("HTTPConnection(host='host.docker.internal', port=8090): Failed to resolve 'host.docker.internal' ([Errno 8] nodename nor servname provided, or not known)"))
+2026-04-16 18:56:10,457 INFO [CREATE:US-002] done — ok=False
+2026-04-16 18:56:10,458 INFO Appended to progress.txt for 'rag-query-api'
+2026-04-16 18:56:10,458 INFO Story US-002 attempt 3 FAILED: CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', 
+2026-04-16 18:56:10,460 INFO Saved prd.json for 'rag-query-api'
+2026-04-16 18:56:10,461 INFO Appended to progress.txt for 'rag-query-api'
+2026-04-16 18:56:10,461 ERROR ❌ US-002 failed: CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NameResolutionError("HTTPConnection(host='hos
+2026-04-16 18:56:10,734 INFO No more pending stories — done.
+2026-04-16 18:56:10,734 INFO === Pipeline finished for 'rag-query-api' ===

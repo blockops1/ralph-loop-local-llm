@@ -1,9 +1,0 @@
-# Ralph Progress Log - rt-exit-logging
-Started: 2026-03-17T19:11:49.536100
----
-
-## [2026-03-17 19:12]
-✅ US-001: Add trade logging to range_exit_monitor.py before removing positions
-Implemented trade logging in range_exit_monitor.py by:
-1. Added TRADE_LOG path constant pointing to data/range_trade_log.jsonl
-2. Created trade_record dict with all required fields (action, symbol, address, entry/exit prices, entry_usdc, pnl_pct, pnl_usd, reason, hold_hours, tx_hash, tokens_sold, ts

@@ -4,7 +4,7 @@
 # It points to host.docker.internal so the container can reach
 # llama-server running on the Mac Mini host.
 
-model_url: "http://host.docker.internal:8090/v1"
+model_url: "http://127.0.0.1:8090/v1"
 model_id: "Qwen3.5-27B-Q6_K.gguf"
 
 # Loop limits

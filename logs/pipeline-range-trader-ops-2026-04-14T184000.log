@@ -1,0 +1,183 @@
+2026-04-14 18:40:00,755 INFO === Ralph 3-Stage Pipeline started | slug=range-trader-ops | model=Qwen3.5-27B-Q6_K.gguf | 2026-04-14T184000 ===
+2026-04-14 18:40:00,755 INFO [PIPELINE:US-001] 3-stage pipeline starting | output=ralph/projects/range-trader-ops/code/range_execute.py
+2026-04-14 18:40:00,755 INFO [CREATE:US-001] starting (model=Qwen3.5-27B-Q6_K.gguf)
+2026-04-14 18:40:00,756 INFO System prompt: ~740 tokens
+2026-04-14 18:40:00,756 INFO Starting agentic loop for US-001: Add realized_slippage and approvals_log to range_execute.py
+2026-04-14 18:40:00,756 INFO Model call #1 (messages=2, elapsed=0s)
+2026-04-14 18:40:00,781 ERROR Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NameResolutionError("HTTPConnection(host='host.docker.internal', port=8090): Failed to resolve 'host.docker.internal' ([Errno 8] nodename nor servname provided, or not known)"))
+2026-04-14 18:40:00,781 INFO [CREATE:US-001] done — ok=False
+2026-04-14 18:40:00,781 INFO Appended to progress.txt for 'range-trader-ops'
+2026-04-14 18:40:00,781 INFO Story US-001 attempt 1 FAILED: CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', 
+2026-04-14 18:40:00,781 INFO Saved prd.json for 'range-trader-ops'
+2026-04-14 18:40:00,781 INFO Appended to progress.txt for 'range-trader-ops'
+2026-04-14 18:40:00,782 ERROR ❌ US-001 failed: CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NameResolutionError("HTTPConnection(host='hos
+2026-04-14 18:40:00,985 INFO [PIPELINE:US-001] 3-stage pipeline starting | output=ralph/projects/range-trader-ops/code/range_execute.py
+2026-04-14 18:40:00,986 INFO [CREATE:US-001] starting (model=Qwen3.5-27B-Q6_K.gguf)
+2026-04-14 18:40:00,987 INFO System prompt: ~740 tokens
+2026-04-14 18:40:00,987 INFO Starting agentic loop for US-001: Add realized_slippage and approvals_log to range_execute.py
+2026-04-14 18:40:00,987 INFO Model call #1 (messages=2, elapsed=0s)
+2026-04-14 18:40:00,998 ERROR Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NameResolutionError("HTTPConnection(host='host.docker.internal', port=8090): Failed to resolve 'host.docker.internal' ([Errno 8] nodename nor servname provided, or not known)"))
+2026-04-14 18:40:00,998 INFO [CREATE:US-001] done — ok=False
+2026-04-14 18:40:00,999 INFO Appended to progress.txt for 'range-trader-ops'
+2026-04-14 18:40:01,000 INFO Story US-001 attempt 2 FAILED: CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', 
+2026-04-14 18:40:01,002 INFO Saved prd.json for 'range-trader-ops'
+2026-04-14 18:40:01,003 INFO Appended to progress.txt for 'range-trader-ops'
+2026-04-14 18:40:01,003 ERROR ❌ US-001 failed: CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NameResolutionError("HTTPConnection(host='hos
+2026-04-14 18:40:01,295 INFO [PIPELINE:US-001] 3-stage pipeline starting | output=ralph/projects/range-trader-ops/code/range_execute.py
+2026-04-14 18:40:01,296 INFO [CREATE:US-001] starting (model=Qwen3.5-27B-Q6_K.gguf)
+2026-04-14 18:40:01,297 INFO System prompt: ~740 tokens
+2026-04-14 18:40:01,297 INFO Starting agentic loop for US-001: Add realized_slippage and approvals_log to range_execute.py
+2026-04-14 18:40:01,298 INFO Model call #1 (messages=2, elapsed=0s)
+2026-04-14 18:40:01,307 ERROR Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NameResolutionError("HTTPConnection(host='host.docker.internal', port=8090): Failed to resolve 'host.docker.internal' ([Errno 8] nodename nor servname provided, or not known)"))
+2026-04-14 18:40:01,307 INFO [CREATE:US-001] done — ok=False
+2026-04-14 18:40:01,308 INFO Appended to progress.txt for 'range-trader-ops'
+2026-04-14 18:40:01,308 INFO Story US-001 attempt 3 FAILED: CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', 
+2026-04-14 18:40:01,310 INFO Saved prd.json for 'range-trader-ops'
+2026-04-14 18:40:01,311 INFO Appended to progress.txt for 'range-trader-ops'
+2026-04-14 18:40:01,311 ERROR ❌ US-001 failed: CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NameResolutionError("HTTPConnection(host='hos
+2026-04-14 18:40:01,522 INFO [PIPELINE:US-002] 3-stage pipeline starting | output=ralph/projects/range-trader-ops/code/range_positions.py
+2026-04-14 18:40:01,522 INFO [CREATE:US-002] starting (model=Qwen3.5-27B-Q6_K.gguf)
+2026-04-14 18:40:01,523 INFO System prompt: ~740 tokens
+2026-04-14 18:40:01,524 INFO Starting agentic loop for US-002: Add positions backup to range_positions.py
+2026-04-14 18:40:01,524 INFO Model call #1 (messages=2, elapsed=0s)
+2026-04-14 18:40:01,532 ERROR Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NameResolutionError("HTTPConnection(host='host.docker.internal', port=8090): Failed to resolve 'host.docker.internal' ([Errno 8] nodename nor servname provided, or not known)"))
+2026-04-14 18:40:01,533 INFO [CREATE:US-002] done — ok=False
+2026-04-14 18:40:01,534 INFO Appended to progress.txt for 'range-trader-ops'
+2026-04-14 18:40:01,534 INFO Story US-002 attempt 1 FAILED: CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', 
+2026-04-14 18:40:01,536 INFO Saved prd.json for 'range-trader-ops'
+2026-04-14 18:40:01,537 INFO Appended to progress.txt for 'range-trader-ops'
+2026-04-14 18:40:01,537 ERROR ❌ US-002 failed: CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NameResolutionError("HTTPConnection(host='hos
+2026-04-14 18:40:01,708 INFO [PIPELINE:US-002] 3-stage pipeline starting | output=ralph/projects/range-trader-ops/code/range_positions.py
+2026-04-14 18:40:01,708 INFO [CREATE:US-002] starting (model=Qwen3.5-27B-Q6_K.gguf)
+2026-04-14 18:40:01,709 INFO System prompt: ~740 tokens
+2026-04-14 18:40:01,709 INFO Starting agentic loop for US-002: Add positions backup to range_positions.py
+2026-04-14 18:40:01,709 INFO Model call #1 (messages=2, elapsed=0s)
+2026-04-14 18:40:01,717 ERROR Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NameResolutionError("HTTPConnection(host='host.docker.internal', port=8090): Failed to resolve 'host.docker.internal' ([Errno 8] nodename nor servname provided, or not known)"))
+2026-04-14 18:40:01,717 INFO [CREATE:US-002] done — ok=False
+2026-04-14 18:40:01,717 INFO Appended to progress.txt for 'range-trader-ops'
+2026-04-14 18:40:01,718 INFO Story US-002 attempt 2 FAILED: CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', 
+2026-04-14 18:40:01,719 INFO Saved prd.json for 'range-trader-ops'
+2026-04-14 18:40:01,720 INFO Appended to progress.txt for 'range-trader-ops'
+2026-04-14 18:40:01,720 ERROR ❌ US-002 failed: CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NameResolutionError("HTTPConnection(host='hos
+2026-04-14 18:40:01,945 INFO [PIPELINE:US-002] 3-stage pipeline starting | output=ralph/projects/range-trader-ops/code/range_positions.py
+2026-04-14 18:40:01,946 INFO [CREATE:US-002] starting (model=Qwen3.5-27B-Q6_K.gguf)
+2026-04-14 18:40:01,948 INFO System prompt: ~740 tokens
+2026-04-14 18:40:01,948 INFO Starting agentic loop for US-002: Add positions backup to range_positions.py
+2026-04-14 18:40:01,948 INFO Model call #1 (messages=2, elapsed=0s)
+2026-04-14 18:40:01,959 ERROR Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NameResolutionError("HTTPConnection(host='host.docker.internal', port=8090): Failed to resolve 'host.docker.internal' ([Errno 8] nodename nor servname provided, or not known)"))
+2026-04-14 18:40:01,959 INFO [CREATE:US-002] done — ok=False
+2026-04-14 18:40:01,960 INFO Appended to progress.txt for 'range-trader-ops'
+2026-04-14 18:40:01,960 INFO Story US-002 attempt 3 FAILED: CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', 
+2026-04-14 18:40:01,961 INFO Saved prd.json for 'range-trader-ops'
+2026-04-14 18:40:01,963 INFO Appended to progress.txt for 'range-trader-ops'
+2026-04-14 18:40:01,963 ERROR ❌ US-002 failed: CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NameResolutionError("HTTPConnection(host='hos
+2026-04-14 18:40:02,239 INFO [PIPELINE:US-003] 3-stage pipeline starting | output=ralph/projects/range-trader-ops/code/_ulogging.py
+2026-04-14 18:40:02,239 INFO [CREATE:US-003] starting (model=Qwen3.5-27B-Q6_K.gguf)
+2026-04-14 18:40:02,240 INFO System prompt: ~740 tokens
+2026-04-14 18:40:02,241 INFO Starting agentic loop for US-003: Create range_health_check.py script
+2026-04-14 18:40:02,241 INFO Model call #1 (messages=2, elapsed=0s)
+2026-04-14 18:40:02,249 ERROR Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NameResolutionError("HTTPConnection(host='host.docker.internal', port=8090): Failed to resolve 'host.docker.internal' ([Errno 8] nodename nor servname provided, or not known)"))
+2026-04-14 18:40:02,249 INFO [CREATE:US-003] done — ok=False
+2026-04-14 18:40:02,250 INFO Appended to progress.txt for 'range-trader-ops'
+2026-04-14 18:40:02,250 INFO Story US-003 attempt 1 FAILED: CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', 
+2026-04-14 18:40:02,252 INFO Saved prd.json for 'range-trader-ops'
+2026-04-14 18:40:02,252 INFO Appended to progress.txt for 'range-trader-ops'
+2026-04-14 18:40:02,253 ERROR ❌ US-003 failed: CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NameResolutionError("HTTPConnection(host='hos
+2026-04-14 18:40:02,403 INFO [PIPELINE:US-003] 3-stage pipeline starting | output=ralph/projects/range-trader-ops/code/_ulogging.py
+2026-04-14 18:40:02,403 INFO [CREATE:US-003] starting (model=Qwen3.5-27B-Q6_K.gguf)
+2026-04-14 18:40:02,404 INFO System prompt: ~740 tokens
+2026-04-14 18:40:02,405 INFO Starting agentic loop for US-003: Create range_health_check.py script
+2026-04-14 18:40:02,405 INFO Model call #1 (messages=2, elapsed=0s)
+2026-04-14 18:40:02,414 ERROR Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NameResolutionError("HTTPConnection(host='host.docker.internal', port=8090): Failed to resolve 'host.docker.internal' ([Errno 8] nodename nor servname provided, or not known)"))
+2026-04-14 18:40:02,414 INFO [CREATE:US-003] done — ok=False
+2026-04-14 18:40:02,415 INFO Appended to progress.txt for 'range-trader-ops'
+2026-04-14 18:40:02,415 INFO Story US-003 attempt 2 FAILED: CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', 
+2026-04-14 18:40:02,416 INFO Saved prd.json for 'range-trader-ops'
+2026-04-14 18:40:02,417 INFO Appended to progress.txt for 'range-trader-ops'
+2026-04-14 18:40:02,417 ERROR ❌ US-003 failed: CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NameResolutionError("HTTPConnection(host='hos
+2026-04-14 18:40:02,562 INFO [PIPELINE:US-003] 3-stage pipeline starting | output=ralph/projects/range-trader-ops/code/_ulogging.py
+2026-04-14 18:40:02,563 INFO [CREATE:US-003] starting (model=Qwen3.5-27B-Q6_K.gguf)
+2026-04-14 18:40:02,564 INFO System prompt: ~740 tokens
+2026-04-14 18:40:02,564 INFO Starting agentic loop for US-003: Create range_health_check.py script
+2026-04-14 18:40:02,564 INFO Model call #1 (messages=2, elapsed=0s)
+2026-04-14 18:40:02,572 ERROR Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NameResolutionError("HTTPConnection(host='host.docker.internal', port=8090): Failed to resolve 'host.docker.internal' ([Errno 8] nodename nor servname provided, or not known)"))
+2026-04-14 18:40:02,573 INFO [CREATE:US-003] done — ok=False
+2026-04-14 18:40:02,573 INFO Appended to progress.txt for 'range-trader-ops'
+2026-04-14 18:40:02,573 INFO Story US-003 attempt 3 FAILED: CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', 
+2026-04-14 18:40:02,575 INFO Saved prd.json for 'range-trader-ops'
+2026-04-14 18:40:02,575 INFO Appended to progress.txt for 'range-trader-ops'
+2026-04-14 18:40:02,575 ERROR ❌ US-003 failed: CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NameResolutionError("HTTPConnection(host='hos
+2026-04-14 18:40:02,706 INFO [PIPELINE:US-004] 3-stage pipeline starting | output=ralph/projects/range-trader-ops/code/range_execute.py
+2026-04-14 18:40:02,706 INFO [CREATE:US-004] starting (model=Qwen3.5-27B-Q6_K.gguf)
+2026-04-14 18:40:02,707 INFO System prompt: ~740 tokens
+2026-04-14 18:40:02,707 INFO Starting agentic loop for US-004: Create revoke_approvals.py script
+2026-04-14 18:40:02,707 INFO Model call #1 (messages=2, elapsed=0s)
+2026-04-14 18:40:02,714 ERROR Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NameResolutionError("HTTPConnection(host='host.docker.internal', port=8090): Failed to resolve 'host.docker.internal' ([Errno 8] nodename nor servname provided, or not known)"))
+2026-04-14 18:40:02,715 INFO [CREATE:US-004] done — ok=False
+2026-04-14 18:40:02,715 INFO Appended to progress.txt for 'range-trader-ops'
+2026-04-14 18:40:02,715 INFO Story US-004 attempt 1 FAILED: CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', 
+2026-04-14 18:40:02,716 INFO Saved prd.json for 'range-trader-ops'
+2026-04-14 18:40:02,717 INFO Appended to progress.txt for 'range-trader-ops'
+2026-04-14 18:40:02,717 ERROR ❌ US-004 failed: CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NameResolutionError("HTTPConnection(host='hos
+2026-04-14 18:40:02,874 INFO [PIPELINE:US-004] 3-stage pipeline starting | output=ralph/projects/range-trader-ops/code/range_execute.py
+2026-04-14 18:40:02,874 INFO [CREATE:US-004] starting (model=Qwen3.5-27B-Q6_K.gguf)
+2026-04-14 18:40:02,875 INFO System prompt: ~740 tokens
+2026-04-14 18:40:02,875 INFO Starting agentic loop for US-004: Create revoke_approvals.py script
+2026-04-14 18:40:02,875 INFO Model call #1 (messages=2, elapsed=0s)
+2026-04-14 18:40:02,882 ERROR Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NameResolutionError("HTTPConnection(host='host.docker.internal', port=8090): Failed to resolve 'host.docker.internal' ([Errno 8] nodename nor servname provided, or not known)"))
+2026-04-14 18:40:02,882 INFO [CREATE:US-004] done — ok=False
+2026-04-14 18:40:02,883 INFO Appended to progress.txt for 'range-trader-ops'
+2026-04-14 18:40:02,883 INFO Story US-004 attempt 2 FAILED: CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', 
+2026-04-14 18:40:02,884 INFO Saved prd.json for 'range-trader-ops'
+2026-04-14 18:40:02,885 INFO Appended to progress.txt for 'range-trader-ops'
+2026-04-14 18:40:02,886 ERROR ❌ US-004 failed: CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NameResolutionError("HTTPConnection(host='hos
+2026-04-14 18:40:03,232 INFO [PIPELINE:US-004] 3-stage pipeline starting | output=ralph/projects/range-trader-ops/code/range_execute.py
+2026-04-14 18:40:03,234 INFO [CREATE:US-004] starting (model=Qwen3.5-27B-Q6_K.gguf)
+2026-04-14 18:40:03,236 INFO System prompt: ~740 tokens
+2026-04-14 18:40:03,236 INFO Starting agentic loop for US-004: Create revoke_approvals.py script
+2026-04-14 18:40:03,236 INFO Model call #1 (messages=2, elapsed=0s)
+2026-04-14 18:40:03,243 ERROR Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NameResolutionError("HTTPConnection(host='host.docker.internal', port=8090): Failed to resolve 'host.docker.internal' ([Errno 8] nodename nor servname provided, or not known)"))
+2026-04-14 18:40:03,243 INFO [CREATE:US-004] done — ok=False
+2026-04-14 18:40:03,244 INFO Appended to progress.txt for 'range-trader-ops'
+2026-04-14 18:40:03,244 INFO Story US-004 attempt 3 FAILED: CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', 
+2026-04-14 18:40:03,245 INFO Saved prd.json for 'range-trader-ops'
+2026-04-14 18:40:03,245 INFO Appended to progress.txt for 'range-trader-ops'
+2026-04-14 18:40:03,245 ERROR ❌ US-004 failed: CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NameResolutionError("HTTPConnection(host='hos
+2026-04-14 18:40:03,410 INFO [PIPELINE:US-005] 3-stage pipeline starting | output=ralph/projects/range-trader-ops/code/_ulogging.py
+2026-04-14 18:40:03,410 INFO [CREATE:US-005] starting (model=Qwen3.5-27B-Q6_K.gguf)
+2026-04-14 18:40:03,411 INFO System prompt: ~740 tokens
+2026-04-14 18:40:03,412 INFO Starting agentic loop for US-005: Add bot_paused and bot_resumed events to _ulogging.py
+2026-04-14 18:40:03,412 INFO Model call #1 (messages=2, elapsed=0s)
+2026-04-14 18:40:03,422 ERROR Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NameResolutionError("HTTPConnection(host='host.docker.internal', port=8090): Failed to resolve 'host.docker.internal' ([Errno 8] nodename nor servname provided, or not known)"))
+2026-04-14 18:40:03,422 INFO [CREATE:US-005] done — ok=False
+2026-04-14 18:40:03,423 INFO Appended to progress.txt for 'range-trader-ops'
+2026-04-14 18:40:03,423 INFO Story US-005 attempt 1 FAILED: CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', 
+2026-04-14 18:40:03,425 INFO Saved prd.json for 'range-trader-ops'
+2026-04-14 18:40:03,426 INFO Appended to progress.txt for 'range-trader-ops'
+2026-04-14 18:40:03,426 ERROR ❌ US-005 failed: CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NameResolutionError("HTTPConnection(host='hos
+2026-04-14 18:40:03,572 INFO [PIPELINE:US-005] 3-stage pipeline starting | output=ralph/projects/range-trader-ops/code/_ulogging.py
+2026-04-14 18:40:03,573 INFO [CREATE:US-005] starting (model=Qwen3.5-27B-Q6_K.gguf)
+2026-04-14 18:40:03,574 INFO System prompt: ~740 tokens
+2026-04-14 18:40:03,574 INFO Starting agentic loop for US-005: Add bot_paused and bot_resumed events to _ulogging.py
+2026-04-14 18:40:03,574 INFO Model call #1 (messages=2, elapsed=0s)
+2026-04-14 18:40:03,583 ERROR Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NameResolutionError("HTTPConnection(host='host.docker.internal', port=8090): Failed to resolve 'host.docker.internal' ([Errno 8] nodename nor servname provided, or not known)"))
+2026-04-14 18:40:03,583 INFO [CREATE:US-005] done — ok=False
+2026-04-14 18:40:03,584 INFO Appended to progress.txt for 'range-trader-ops'
+2026-04-14 18:40:03,584 INFO Story US-005 attempt 2 FAILED: CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', 
+2026-04-14 18:40:03,586 INFO Saved prd.json for 'range-trader-ops'
+2026-04-14 18:40:03,587 INFO Appended to progress.txt for 'range-trader-ops'
+2026-04-14 18:40:03,587 ERROR ❌ US-005 failed: CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NameResolutionError("HTTPConnection(host='hos
+2026-04-14 18:40:03,792 INFO [PIPELINE:US-005] 3-stage pipeline starting | output=ralph/projects/range-trader-ops/code/_ulogging.py
+2026-04-14 18:40:03,793 INFO [CREATE:US-005] starting (model=Qwen3.5-27B-Q6_K.gguf)
+2026-04-14 18:40:03,794 INFO System prompt: ~740 tokens
+2026-04-14 18:40:03,794 INFO Starting agentic loop for US-005: Add bot_paused and bot_resumed events to _ulogging.py
+2026-04-14 18:40:03,794 INFO Model call #1 (messages=2, elapsed=0s)
+2026-04-14 18:40:03,801 ERROR Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NameResolutionError("HTTPConnection(host='host.docker.internal', port=8090): Failed to resolve 'host.docker.internal' ([Errno 8] nodename nor servname provided, or not known)"))
+2026-04-14 18:40:03,801 INFO [CREATE:US-005] done — ok=False
+2026-04-14 18:40:03,802 INFO Appended to progress.txt for 'range-trader-ops'
+2026-04-14 18:40:03,802 INFO Story US-005 attempt 3 FAILED: CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', 
+2026-04-14 18:40:03,803 INFO Saved prd.json for 'range-trader-ops'
+2026-04-14 18:40:03,804 INFO Appended to progress.txt for 'range-trader-ops'
+2026-04-14 18:40:03,804 ERROR ❌ US-005 failed: CREATE FAILED: Model API error: HTTPConnectionPool(host='host.docker.internal', port=8090): Max retries exceeded with url: /v1/chat/completions (Caused by NameResolutionError("HTTPConnection(host='hos
+2026-04-14 18:40:04,049 INFO No more pending stories — done.
+2026-04-14 18:40:04,049 INFO === Pipeline finished for 'range-trader-ops' ===

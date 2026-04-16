@@ -10,6 +10,7 @@ services:
     environment:
       - RALPH_DIR=/app
       - PYTHONUNBUFFERED=1
+    network_mode: host
     volumes:
       - ~/ralph/projects:/app/projects
       - ~/ralph/logs:/app/logs

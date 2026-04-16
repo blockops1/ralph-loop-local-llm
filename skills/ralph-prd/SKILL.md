@@ -12,16 +12,19 @@ related_skills: ["ralph-loop", "local-llm-manager"]
 
 Write PRDs that Ralph can actually execute. A bad PRD wastes hours of model time.
 
-## Ralph Has Two Execution Modes
+## Ralph Execution Modes
 
 | Mode | Command | Best for |
 |------|---------|----------|
-| **Single-stage** | `./ralph.sh {slug}` | Quick file fixes, prototyping, one-off stories |
-| **3-stage pipeline** | `python3 pipeline_runner.py {slug}` | New projects, anything that matters |
+| **3-stage pipeline** | `cd ~/ralph && ./ralph.sh {slug}` | All projects — standard production runs |
+| **Single story** | `cd ~/ralph && ./ralph.sh {slug} --story US-001` | One story only |
+| **Single-stage** | Legacy — not recommended | — |
+
+**Ralph runs in Docker.** `./ralph.sh` wraps `docker compose run --rm`, which mounts `projects/` and `logs/` from the host.
 
 Both modes read the same `prd.json`. The 3-stage pipeline adds a `type` field requirement (see schema below).
 
-**Recommendation:** Write the PRD assuming the 3-stage pipeline. It produces better output. Use single-stage only for quick fixes.
+**Recommendation:** Write the PRD assuming the 3-stage pipeline. It produces better output. Use `./ralph.sh {slug}` (standard) or `./ralph.sh {slug} --story US-001` (one story).
 
 ---
 
@@ -206,18 +209,18 @@ If NO (greenfield/sandbox): target files directly.
 
 ## Sequential Execution Rule
 
-Never launch multiple `ralph.sh` or `pipeline_runner.py` calls simultaneously on the same project. llama-server is single-threaded — parallel runs deadlock.
+Never launch multiple `./ralph.sh` or `pipeline_runner.py` calls simultaneously on the same project. llama-server is single-threaded — parallel runs deadlock.
 
 For chains of PRDs:
 ```bash
-./ralph.sh slug-1
-./ralph.sh slug-2
+cd ~/ralph && ./ralph.sh slug-1
+cd ~/ralph && ./ralph.sh slug-2
 ```
 
 For 3-stage pipeline — `pipeline_runner.py` has its own lockfile per project:
 ```bash
-python3 pipeline_runner.py slug-1
-python3 pipeline_runner.py slug-2
+cd ~/ralph && ./ralph.sh {slug} --story US-001
+cd ~/ralph && ./ralph.sh {slug} --story US-002
 ```
 
 ---

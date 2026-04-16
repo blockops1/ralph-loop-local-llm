@@ -1,7 +1,0 @@
-# Ralph Progress Log — ralph-sequential-runner
-Started: 2026-03-17T18:43:53.331311
----
-
-## [2026-03-17 18:46]
-✅ US-001: Fix ralph.sh to block until Ralph process completes (sequential execution)
-Added `wait $RALPH_PID` and `RALPH_EXIT` tracking to ralph/ralph.sh to make the script block until the Ralph process completes. This ensures sequential callers don't stack parallel runs, preventing memory pressure and deadlocks in llama-server. All acceptance criteria pass: syntax check, grep for wa

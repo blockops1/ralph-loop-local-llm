@@ -1,7 +1,7 @@
 ---
 name: ralph-loop
-description: "Manage the Ralph autonomous coding loop. Ralph runs local instruct models (Qwen 3.5 27B) through structured coding tasks defined in prd.json. Ralph is driven by pipeline_runner.py — a 3-stage pipeline (CREATE → CRITIQUE → FIX). Use when: checking Ralph status, starting a new Ralph project, reviewing Ralph's completed work, intervening when Ralph is stuck, understanding what Ralph did and why. Triggers: 'check ralph status', 'what is ralph working on', 'start ralph', 'ralph done yet', 'ralph is stuck', 'how does ralph work', 'ralph pipeline'."
-tags: ["ralph", "autonomous", "coding", "llm", "qwen", "llama.cpp"]
+description: "Manage the Ralph autonomous coding loop. Ralph runs local instruct models (Qwen 3.5 27B via llama.cpp) through structured coding tasks defined in prd.json. Ralph runs inside a Docker container (via docker compose). Execution is a 3-stage pipeline: CREATE → CRITIQUE → FIX. Use when: checking Ralph status, starting a new Ralph project, reviewing Ralph's completed work, intervening when Ralph is stuck, understanding what Ralph did and why. Triggers: 'check ralph status', 'what is ralph working on', 'start ralph', 'ralph done yet', 'ralph is stuck', 'how does ralph work', 'ralph pipeline'."
+tags: ["ralph", "autonomous", "coding", "llm", "qwen", "llama.cpp", "docker"]
 related_skills: ["ralph-prd", "local-llm-manager"]
 ---
 
@@ -11,7 +11,9 @@ Ralph is the autonomous coding loop that runs a local instruct model (Qwen 3.5 2
 
 ## How Ralph Runs
 
-**Primary entry point:** `pipeline_runner.py` (3-stage pipeline)
+**Ralph runs inside Docker.** The Mac Mini host has no Python dependencies — everything runs in the `ralph-local` container.
+
+**Entry point:** `ralph.sh` (Docker wrapper) → `docker compose run --rm ralph` → `python3 ralph.py` (single-stage) OR `python3 pipeline_runner.py` (3-stage)
 
 ```
 Story picked from prd.json (get_next_story)
@@ -37,55 +39,58 @@ prd.json updated → next story
 ## Ralph Directory Structure
 
 ```
-ralph/
-├── ralph.py              # Single-stage orchestrator (PROMPT.md only) — rarely used
-├── ralph.sh              # Shell wrapper — calls pipeline_runner.py, NOT single-stage
-├── pipeline_runner.py    # 3-stage pipeline orchestrator — PRIMARY entry point
-├── prd_manager.py        # PRD read/write, story state management
-├── prd_linter.py         # Validates prd.json before every run — aborts if malformed
-├── tools.py              # Tool registry + execution (git_commit, write_file, etc.)
-├── config.yaml           # Model URL, limits, timeouts
-├── PROMPT.md             # System prompt for CREATE stage (has Tool Usage Notes)
-├── PROMPT-critique.md    # System prompt for CRITIQUE stage
-├── PROMPT-rework.md      # System prompt for FIX stage
-├── logs/                 # Timestamped run logs
-├── projects/             # One subdir per project
+~/ralph/                          # Ralph root (on Mac Mini host)
+├── Dockerfile                     # Builds ralph-local image
+├── docker-compose.yml             # Container config with host networking
+├── ralph.sh                      # Docker wrapper script — PRIMARY LAUNCHER
+├── ralph.py                      # Single-stage orchestrator (called inside container)
+├── pipeline_runner.py            # 3-stage pipeline (called inside container)
+├── prd_manager.py                # PRD read/write, story state management
+├── prd_linter.py                 # Validates prd.json before every run
+├── tools.py                      # Tool registry + execution
+├── config.yaml                   # Model URL, limits, timeouts
+│                                  #   model_url: http://host.docker.internal:8090/v1 (Docker)
+│                                  #   For native: http://localhost:8090/v1
+├── PROMPT.md                     # CREATE stage system prompt
+├── PROMPT-critique.md            # CRITIQUE stage system prompt
+├── PROMPT-rework.md              # FIX stage system prompt
+├── logs/                         # Timestamped run logs (host volume)
+├── projects/                     # One subdir per project (host volume)
 │   └── {slug}/
-│       ├── prd.json      # The PRD (source of truth)
-│       ├── progress.txt  # Append-only run log
-│       ├── AGENTS.md     # Project conventions (optional)
-│       ├── critique.md   # Stage 2 output (per project)
-│       ├── .pipeline.lock  # Concurrency lock — remove if stale
-│       └── archive/      # Archived runs (reset before fresh start)
-└── projects/example/    # Minimal working example
+│       ├── prd.json             # The PRD (source of truth)
+│       ├── progress.txt         # Append-only run log
+│       ├── AGENTS.md            # Project conventions (optional)
+│       ├── critique.md          # Stage 2 output (per project)
+│       ├── .pipeline.lock       # Concurrency lock — remove if stale
+│       └── archive/             # Archived runs
+└── skills/
+    ├── ralph-loop/              # THIS skill
+    └── ralph-prd/               # PRD writing skill
 ```
 
-## Launchd Management
+**Volumes:** `projects/` and `logs/` are mounted from host → container. Code files are in the image.
 
-Ralph is managed by `com.user.ralph-runner.plist` (launchd, ~/Library/LaunchAgents/):
+## Prerequisites
 
-```xml
-<key>RunAtLoad</key><false/>   <!-- Disabled — enable when project is active -->
-<key>StartInterval</key><integer>600</integer>  <!-- Fires every 10 minutes -->
-```
+1. **llama-server running on host** (port 8090, managed by launchd):
+   ```bash
+   launchctl list | grep llama-server-opus
+   curl -s http://127.0.0.1:8090/health  # should return {"status":"ok"}
+   ```
+   Restart if needed: `launchctl unload ~/Library/LaunchAgents/ai.hermes.llama-server-opus.plist && launchctl load ~/Library/LaunchAgents/ai.hermes.llama-server-opus.plist`
 
-- **Status check:** `launchctl list | grep ralph` — exit 1 means not running
-- **PID check:** `ps aux | grep pipeline_runner | grep -v grep`
-- **Enabling:** `launchctl load ~/Library/LaunchAgents/com.user.ralph-runner.plist`
-- **Disabling:** `launchctl unload ~/Library/LaunchAgents/com.user.ralph-runner.plist`
-- **NOT auto-restarting:** pkill stops it — launchd will fire again at next 10min interval
+2. **Docker Desktop running** on the Mac Mini
+
+3. **Ralph image built** (one-time):
+   ```bash
+   cd ~/ralph && docker compose build
+   ```
 
 ## Quick Status Check
 
 ```bash
 cd ~/ralph
-python3 pipeline_runner.py --list-projects
-```
-
-Or check a specific project:
-
-```bash
-# Stories done / total
+docker compose ps                    # Is Ralph container running?
 python3 -c "
 import json
 d = json.load(open('projects/{slug}/prd.json'))
@@ -98,7 +103,7 @@ for s in blocked: print(f'  BLOCKED: {s[\"id\"]} — {s.get(\"error\",\"\")[:80]
 
 # Latest log
 ls -lt logs/ | head -5
-tail -30 logs/pipeline-{slug}-*.log | tail -30
+tail -30 logs/pipeline-{slug}-*.log 2>/dev/null | tail -30
 ```
 
 ## Starting a Project
@@ -112,6 +117,7 @@ Use the **ralph-prd skill** first. A good PRD is the #1 determinant of success.
 ```bash
 cd ~/ralph/projects/{slug}
 mkdir -p archive && mv .pipeline.lock archive/ 2>/dev/null || true
+
 # Reset all stories
 python3 -c "
 import json
@@ -130,50 +136,62 @@ print('Reset', len(prd['userStories']), 'stories')
 
 ```bash
 cd ~/ralph
-nohup python3 pipeline_runner.py {slug} > logs/pipeline-{slug}-$(date +%Y%m%d_%H%M%S).log 2>&1 &
-echo "PID: $!"
+
+# Standard: 3-stage pipeline
+./ralph.sh {slug}
+
+# Single story only
+./ralph.sh {slug} --story US-001
+
+# List projects
+./ralph.sh --list-projects
 ```
 
-Or let launchd handle it (fires every 10min if enabled):
+**Ralph sends a Discord/Telegram notification** when each story completes and when the pipeline finishes.
+
+## How ralph.sh Works
+
+`ralph.sh` is the Docker wrapper:
 
 ```bash
-launchctl load ~/Library/LaunchAgents/com.user.ralph-runner.plist
+docker compose run --rm \
+  --entrypoint "python3 ralph.py" \
+  ralph {slug}
 ```
 
-Ralph sends a Discord/Telegram notification when each story completes.
+For 3-stage pipeline (standard):
+```bash
+docker compose run --rm \
+  --entrypoint "python3 pipeline_runner.py {slug}" \
+  ralph
+```
 
-## ralph.sh Is Not Single-Stage
-
-**Important correction:** `ralph.sh` does NOT run single-stage Ralph. It calls `pipeline_runner.py` (the 3-stage pipeline). The skill's earlier description of "ralph.sh single-stage for quick iterations" is deprecated.
-
-**What ralph.sh actually does:**
-- Validates PRD via `prd_linter.py` (aborts if malformed)
-- Flips CPU governor to performance mode during run, restores on exit
-- Runs `pipeline_runner.py` with nohup + wait (sequential, not parallel)
-- Log rotates — keeps last 20 logs per project
-
-**When to use ralph.sh:** Only when launching via launchd/cron. For manual runs, use `pipeline_runner.py` directly.
+Key behavior:
+- Builds image if needed (`docker compose build --quiet`)
+- Mounts `projects/` and `logs/` from host
+- Uses `host.docker.internal:8090` to reach llama-server on host
+- `--rm` cleans up container after each run
 
 ## Model Configuration
 
-Ralph uses Qwen 3.5 27B Q6_K via launchd-managed llama-server on port 8090.
+**llama-server** runs on the Mac Mini host (not in container) managed by launchd:
+- Plist: `~/Library/LaunchAgents/ai.hermes.llama-server-opus.plist`
+- Model: `Qwen3.5-27B-Q6_K.gguf` on port 8090
+- Thinking disabled: `chat_template_kwargs: {"enable_thinking": false}`
 
-**llama-server is managed by:** `ai.hermes.llama-server-opus.plist` (~/Library/LaunchAgents/)
-- **Restart server:** `launchctl unload ... && launchctl load ...`
-- **Verify:** `curl -s http://127.0.0.1:8090/v1/models`
-
-**config.yaml (ralph/config.yaml):**
+**Ralph config.yaml** (inside container):
 ```yaml
-model_url: "http://localhost:8090/v1"
+# Ralph runs IN Docker — this URL reaches the host's llama-server
+model_url: "http://host.docker.internal:8090/v1"
 model_id: "Qwen3.5-27B-Q6_K.gguf"
-max_tokens: 16384
-max_context_tokens: 60000
-request_timeout: 14400
+max_tokens: 8192
+max_context_tokens: 120000   # ~11K headroom under 131072 ctx
+request_timeout: 14400        # 2 hours — cold prefill can be slow
 max_tool_calls_per_story: 160
 max_attempts_per_story: 5
 ```
 
-**No thinking:** `chat_template_kwargs: {"enable_thinking": false}` in the API call. Thinking mode causes malformed tool calls.
+**For native testing (no Docker):** change to `http://localhost:8090/v1` in `config.yaml`.
 
 ## Tool Usage Rules (from PROMPT.md)
 
@@ -200,12 +218,23 @@ story.pop('error', None)
 json.dump(prd, open('prd.json', 'w'), indent=2)
 ```
 
-Then optionally add a hint to `AGENTS.md` and re-run.
+Then optionally add a hint to `AGENTS.md` and re-run:
+```bash
+cd ~/ralph && ./ralph.sh {slug} --story US-001
+```
 
 ### Lockfile collision
 
 ```bash
 rm ~/ralph/projects/{slug}/.pipeline.lock
+```
+
+### Container won't start
+
+```bash
+cd ~/ralph
+docker compose build        # rebuild image
+docker compose run --rm ralph python3 pipeline_runner.py --list-projects  # test
 ```
 
 ### Fix a broken story description
@@ -222,7 +251,7 @@ s['attempts'] = 0
 s.pop('error', None)
 json.dump(prd, open('prd.json','w'), indent=2)
 "
-python3 pipeline_runner.py {slug} --story US-001
+cd ~/ralph && ./ralph.sh {slug} --story US-001
 ```
 
 ### Ralph's policy on manual fixes
@@ -238,6 +267,7 @@ python3 pipeline_runner.py {slug} --story US-001
 | `dd` blocked in autonomous mode — git_commit loops | Write commit message to temp file via Python, use `git commit -F` | tools.py |
 | `python3 -c` blocked — Ralph loops checking file existence | Added Tool Usage Notes to PROMPT.md — use `test -f` | PROMPT.md |
 | Loop detection on `list_dir` with same args | Ralph re-reads from context instead of re-listing | — |
+| Docker registry unreachable — pre-built image | `ralph-local:latest` image exists, `docker compose build` updates it | — |
 
 ---
 
@@ -259,6 +289,11 @@ with open('prd.json', 'w') as f:
     json.dump(prd, f, indent=2)
 ```
 
+Then:
+```bash
+cd ~/ralph && ./ralph.sh {slug}
+```
+
 ## Context Pre-Loading
 
 Ralph pre-loads all files listed in `contextFiles` directly into the system prompt. This eliminates re-read loops.
@@ -274,12 +309,16 @@ Ralph pre-loads all files listed in `contextFiles` directly into the system prom
 ## Reviewing Completed Work
 
 ```bash
-cd ~/.hermes/workspace
-git log --oneline -10 -- ralph/
-git log --oneline -5 -- {target-repo}/   # Where Ralph committed
+# Ralph's git log (commits happen inside container, synced to host via volume)
+cd ~/ralph/projects/{slug}
+git log --oneline -10
+
+# Target repo (where Ralph committed)
+cd ~/production_apps/{target-repo}
+git log --oneline -5
 ```
 
-Each passed story = one git commit. After full PRD complete → merge dev to main.
+Each passed story = one git commit inside the container (synced to host volume). After full PRD complete → review and merge.
 
 ## Ralph PRD Skill → Ralph Loop Skill Handoff
 
@@ -296,27 +335,28 @@ ralph-prd skill: Write prd.json
     ▼
 ralph-loop skill: Run and monitor
     │  - Reset if re-running
-    │  - python3 pipeline_runner.py {slug}
+    │  - cd ~/ralph && ./ralph.sh {slug}
     │  - Wait for notifications
     │  - Intervene if blocked
     │
     ▼
-Review git log + commits
+Review git log + commits in projects/{slug}/
 ```
 
-**Never skip ralf-prd.** A bad PRD wastes hours of model time.
+**Never skip ralph-prd.** A bad PRD wastes hours of model time.
 
 ## Files to Know
 
 | File | Purpose |
 |------|---------|
-| `ralph.py` | Single-stage orchestrator (legacy, rarely used) |
-| `ralph.sh` | Shell wrapper — calls pipeline_runner.py, manages CPU governor, log rotation |
-| `pipeline_runner.py` | 3-stage pipeline orchestrator — PRIMARY |
+| `ralph.sh` | Docker wrapper — PRIMARY entry point |
+| `docker-compose.yml` | Container config; `host.docker.internal` for llama-server |
+| `ralph.py` | Single-stage orchestrator (legacy; ralph.sh calls pipeline_runner.py by default) |
+| `pipeline_runner.py` | 3-stage pipeline orchestrator — called by ralph.sh |
 | `prd_linter.py` | Validates prd.json before every run |
 | `prd_manager.py` | PRD CRUD, story state machine |
 | `tools.py` | Tool registry + execution (git_commit uses temp file, no dd) |
-| `config.yaml` | Model URL, limits, timeouts |
+| `config.yaml` | Model URL (`host.docker.internal:8090` for Docker), limits, timeouts |
 | `PROMPT.md` | CREATE stage system prompt + Tool Usage Notes |
 | `PROMPT-critique.md` | CRITIQUE stage system prompt |
 | `PROMPT-rework.md` | FIX stage system prompt |
@@ -325,4 +365,3 @@ Review git log + commits
 | `projects/{slug}/progress.txt` | Append-only story log |
 | `projects/{slug}/critique.md` | Stage 2 output (per project) |
 | `projects/{slug}/.pipeline.lock` | Concurrency lock |
-| `projects/{slug}/AGENTS.md` | Project conventions |

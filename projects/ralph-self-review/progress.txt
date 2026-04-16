@@ -1,7 +1,0 @@
-# Ralph Progress Log — ralph-self-review
-Started: 2026-03-17T18:43:53.450755
----
-
-## [2026-03-17 18:48]
-✅ US-001: Add pre-write self-review step to PROMPT.md workflow
-Modified ralph/PROMPT.md to add a self-review step in the Workflow section (step 3) that requires the model to enumerate functions/methods, database tables/columns, external APIs, and acceptance criterion satisfaction before calling write_file. Updated Rule 1 to reference the self-review step for co
