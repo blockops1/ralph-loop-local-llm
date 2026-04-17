@@ -24,7 +24,7 @@ Host Mac Mini                           Docker container (ralph)
 llama-server :8090 ◄─── host net ────►  localhost:8090
 config.yaml         ───────────────►   /app/config.yaml (read at runtime)
 PROMPT*.md          ───────────────►   /app/PROMPT*.md
-ralph.sh            ──── docker ────►  python3 ralph.py  (legacy)
+ralph.sh            ──── archived ────►  do not use
 ralph.py            ──── calls ────►   loop_runner.py → run_all_through_pipeline()
 ```
 
@@ -225,8 +225,7 @@ Key behavior:
 - The container uses host networking (`network_mode: host` in docker-compose.yml)
 
 ### About ralph.sh
-
-`ralph.sh` is a legacy wrapper that overrides the ENTRYPOINT with `python3 ralph.py`. It is no longer the recommended way to run Ralph. Use `docker compose run --rm ralph {slug}` directly.
+`ralph.sh` has been archived. It overrode the ENTRYPOINT with `python3 ralph.py` (single-stage CREATE only). Use `docker compose run --rm ralph {slug}` directly.
 
 ### Quick Status Check
 
@@ -459,13 +458,14 @@ If NO (greenfield/sandbox): target files directly.
 ~/ralph/                          # Host source directory
 ├── Dockerfile                    # Container image definition
 ├── docker-compose.yml           # Container config; host networking
-├── ralph.sh                      # Legacy wrapper — use docker compose run instead
-├── ralph.py                      # Legacy orchestrator (used by ralph.sh)
+├── archive/
+│   └── ralph.sh                  # Archived — do not use
 ├── pipeline_runner.py            # 3-stage pipeline — PRIMARY ENTRYPOINT (Dockerfile ENTRYPOINT)
-├── loop_runner.py                # Pipeline runner logic — called by ralph.py
+├── loop_runner.py                # Pipeline runner logic — called by pipeline_runner.py
 ├── prd_manager.py                # PRD read/write, story state machine
 ├── prd_linter.py                 # Validates prd.json before every run
 ├── tools.py                      # Tool registry + execution (git_commit uses temp file, no dd)
+├── ralph.py                      # Legacy orchestrator (used by archived ralph.sh)
 ├── config.yaml                   # Model URL, limits, timeouts
 │                                #   model_url: http://host.docker.internal:8090/v1 (Docker)
 │                                #   For native: http://localhost:8090/v1
@@ -749,7 +749,7 @@ Review git log + commits in projects/{slug}/
 
 | Version | Date | Key Changes |
 |---------|------|-------------|
-| 0.9.0 | 2026-04-17 | docker compose run --rm ralph {slug} is now the primary launch command; ralph.sh marked legacy; pipeline_runner.py clarified as the Dockerfile ENTRYPOINT |
+| 0.9.0 | 2026-04-17 | docker compose run --rm ralph {slug} is now the primary launch command; ralph.sh archived; pipeline_runner.py clarified as the Dockerfile ENTRYPOINT |
 | 0.8.0 | 2026-04-17 | Full llama-server setup: launchd plist, model path note, flag explanations, start/verify commands |
 | 0.7.0 | 2026-04-17 | Added: tool usage rules, known issues table, common failures + fixes, CRITIQUE timeout prevention, PRD schema, validation checklist. Skills moved to openclaw-imports canonical. |
 | 0.6.0 | 2026-04-16 | Full 3-stage pipeline documentation, PRD path convention, production workflow, stage isolation principle |
