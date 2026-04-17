@@ -1,6 +1,6 @@
 # Ralph Loop — Admin Guide
 
-**Version:** 0.8.0 (2026-04-17)
+**Version:** 0.9.0 (2026-04-17)
 **Canonical skills:** `~/.hermes/skills/openclaw-imports/ralph-loop/` and `ralph-prd/`
 **Docker project:** `~/ralph/` (Ralph's source code + runtime workspace)
 
@@ -24,7 +24,7 @@ Host Mac Mini                           Docker container (ralph)
 llama-server :8090 ◄─── host net ────►  localhost:8090
 config.yaml         ───────────────►   /app/config.yaml (read at runtime)
 PROMPT*.md          ───────────────►   /app/PROMPT*.md
-ralph.sh            ──── docker ────►  python3 ralph.py
+ralph.sh            ──── docker ────►  python3 ralph.py  (legacy)
 ralph.py            ──── calls ────►   loop_runner.py → run_all_through_pipeline()
 ```
 
@@ -173,34 +173,60 @@ prd.json updated → next story
 cd ~/ralph
 
 # Standard: 3-stage pipeline (CREATE → CRITIQUE → FIX per story)
-./ralph.sh {slug}
+docker compose run --rm ralph {slug}
 
 # Single story only
-./ralph.sh {slug} --story US-001
+docker compose run --rm ralph {slug} --story US-001
 
 # List all projects
-./ralph.sh --list-projects
+docker compose run --rm ralph python3 pipeline_runner.py --list-projects
 ```
 
 **Ralph sends a Discord/Telegram notification** when each story completes and when the pipeline finishes.
 
-### How ralph.sh Works
+### How It Works
 
-`ralph.sh` is the Docker wrapper:
+`docker compose run --rm ralph {slug}` runs the container with the **default ENTRYPOINT** set in the Dockerfile:
 
 ```bash
-docker compose run --rm \
-  --entrypoint "python3 ralph.py" \
-  ralph {slug}
+ENTRYPOINT ["python3", "pipeline_runner.py"]
 ```
 
-`ralph.py` detects `--pipeline` (default) vs `--single-stage` and calls `loop_runner.py` → `run_all_through_pipeline()` for the 3-stage pipeline.
+So the command becomes:
+
+```bash
+docker compose run --rm ralph {slug}
+# → python3 pipeline_runner.py {slug}
+```
+
+`pipeline_runner.py` orchestrates the 3-stage pipeline directly:
+
+```
+Story picked from prd.json
+    │
+    ├─→ stage_create():   ralph.run_story_loop(type=create) + PROMPT.md
+    │   └─→ write_file() → output file
+    │   └─→ git commit (via temp file — no shell dd)
+    │
+    ├─→ stage_critique():  raw model call + PROMPT-critique.md + PRD + output file
+    │   └─→ writes critique.md next to output file
+    │
+    └─→ stage_fix():       ralph.run_story_loop(type=rework) + PROMPT-rework.md + critique + output
+        └─→ write_file() → overwrites output file
+        └─→ git commit
+
+prd.json updated → next story
+```
 
 Key behavior:
-- Builds image if needed (`docker compose build --quiet`)
-- Mounts `projects/` and `logs/` from host
-- Uses `host.docker.internal:8090` to reach llama-server on host
-- `--rm` cleans up container after each run
+- `docker compose run --rm` cleans up the container after each run
+- `projects/` and `logs/` are mounted from host
+- llama-server is reached at `host.docker.internal:8090` (configured in `config.yaml`)
+- The container uses host networking (`network_mode: host` in docker-compose.yml)
+
+### About ralph.sh
+
+`ralph.sh` is a legacy wrapper that overrides the ENTRYPOINT with `python3 ralph.py`. It is no longer the recommended way to run Ralph. Use `docker compose run --rm ralph {slug}` directly.
 
 ### Quick Status Check
 
@@ -312,7 +338,7 @@ json.dump(prd, open('/app/projects/{slug}/prd.json', 'w'), indent=2)
 
 Then optionally add a hint to `AGENTS.md` and re-run:
 ```bash
-cd ~/ralph && ./ralph.sh {slug} --story US-001
+cd ~/ralph && docker compose run --rm ralph {slug} --story US-001
 ```
 
 ### Lockfile collision
@@ -344,7 +370,7 @@ s['attempts'] = 0
 s.pop('error', None)
 json.dump(prd, open('/app/projects/{slug}/prd.json', 'w'), indent=2)
 "
-cd ~/ralph && ./ralph.sh {slug} --story US-001
+cd ~/ralph && docker compose run --rm ralph {slug} --story US-001
 ```
 
 ### Ralph's policy on manual fixes
@@ -394,20 +420,20 @@ The 3-stage pipeline's CRITIQUE stage is a **single model call** that reads the 
 
 ## Sequential Execution Rule
 
-**Never launch multiple `./ralph.sh` or `pipeline_runner.py` calls simultaneously on the same project.** llama-server is single-threaded — parallel runs deadlock.
+**Never launch multiple `docker compose run --rm ralph` calls simultaneously on the same project.** llama-server is single-threaded — parallel runs deadlock.
 
 For chains of PRDs:
 ```bash
-cd ~/ralph && ./ralph.sh slug-1
+cd ~/ralph && docker compose run --rm ralph slug-1
 # wait for completion
-cd ~/ralph && ./ralph.sh slug-2
+cd ~/ralph && docker compose run --rm ralph slug-2
 ```
 
 For single stories:
 ```bash
-cd ~/ralph && ./ralph.sh {slug} --story US-001
+cd ~/ralph && docker compose run --rm ralph {slug} --story US-001
 # wait for completion
-cd ~/ralph && ./ralph.sh {slug} --story US-002
+cd ~/ralph && docker compose run --rm ralph {slug} --story US-002
 ```
 
 ---
@@ -433,9 +459,9 @@ If NO (greenfield/sandbox): target files directly.
 ~/ralph/                          # Host source directory
 ├── Dockerfile                    # Container image definition
 ├── docker-compose.yml           # Container config; host networking
-├── ralph.sh                      # Docker wrapper script — PRIMARY LAUNCHER
-├── ralph.py                      # Single-stage orchestrator (called via ralph.sh)
-├── pipeline_runner.py            # 3-stage pipeline (standalone; not used by ralph.sh)
+├── ralph.sh                      # Legacy wrapper — use docker compose run instead
+├── ralph.py                      # Legacy orchestrator (used by ralph.sh)
+├── pipeline_runner.py            # 3-stage pipeline — PRIMARY ENTRYPOINT (Dockerfile ENTRYPOINT)
 ├── loop_runner.py                # Pipeline runner logic — called by ralph.py
 ├── prd_manager.py                # PRD read/write, story state machine
 ├── prd_linter.py                 # Validates prd.json before every run
@@ -671,7 +697,7 @@ with open('/app/projects/{slug}/prd.json', 'w') as f:
 
 Then:
 ```bash
-cd ~/ralph && ./ralph.sh {slug}
+cd ~/ralph && docker compose run --rm ralph {slug}
 ```
 
 ---
@@ -707,7 +733,7 @@ ralph-prd skill: Write prd.json
     ▼
 ralph-loop skill: Run and monitor
     │  - Reset if re-running
-    │  - cd ~/ralph && ./ralph.sh {slug}
+    │  - cd ~/ralph && docker compose run --rm ralph {slug}
     │  - Wait for notifications
     │  - Intervene if blocked
     │
@@ -723,6 +749,7 @@ Review git log + commits in projects/{slug}/
 
 | Version | Date | Key Changes |
 |---------|------|-------------|
+| 0.9.0 | 2026-04-17 | docker compose run --rm ralph {slug} is now the primary launch command; ralph.sh marked legacy; pipeline_runner.py clarified as the Dockerfile ENTRYPOINT |
 | 0.8.0 | 2026-04-17 | Full llama-server setup: launchd plist, model path note, flag explanations, start/verify commands |
 | 0.7.0 | 2026-04-17 | Added: tool usage rules, known issues table, common failures + fixes, CRITIQUE timeout prevention, PRD schema, validation checklist. Skills moved to openclaw-imports canonical. |
 | 0.6.0 | 2026-04-16 | Full 3-stage pipeline documentation, PRD path convention, production workflow, stage isolation principle |
