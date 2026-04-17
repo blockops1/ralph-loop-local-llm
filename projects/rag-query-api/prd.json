@@ -34,12 +34,22 @@
     },
     {
       "id": "US-002",
+      "type": "create",
       "title": "Create api_server/ project structure and __init__.py",
-      "description": "Current state: /app/zk-rag-v2/api_server/ does not exist.\n\nWhat to build: Create the directory /app/zk-rag-v2/api_server/ and two files:\n- __init__.py (empty)\n- __main__.py \u2014 entry point that runs: uvicorn.run('api_server.api_server:app', host='127.0.0.1', port=8100, reload=False)\n\nDo NOT create api_server.py yet \u2014 that is US-003.\nDo NOT install any packages yet.",
+      "description": "Current state: /app/zk-rag-v2/api_server/ does not exist.\n\nWhat to build: Create the directory /app/zk-rag-v2/api_server/ and two files:\n- __init__.py (empty)\n- __main__.py -- entry point that runs: uvicorn.run('api_server.api_server:app', host='127.0.0.1', port=8100, reload=False)\n\nDo NOT create api_server.py yet -- that is US-003.\nDo NOT install any packages yet.",
+      "target_file": "/app/zk-rag-v2/api_server/__main__.py",
+      "output_file": "/app/zk-rag-v2/api_server/__main__.py",
+      "preserve": [
+        "__init__.py must remain as an empty package marker",
+        "api_server.py must NOT be created in this story -- that is US-003"
+      ],
       "acceptanceCriteria": [
         "test -d /app/zk-rag-v2/api_server",
         "test -f /app/zk-rag-v2/api_server/__init__.py",
         "test -f /app/zk-rag-v2/api_server/__main__.py",
+        "python3 -m py_compile /app/zk-rag-v2/api_server/__main__.py"
+      ],
+      "qualityChecks": [
         "python3 -m py_compile /app/zk-rag-v2/api_server/__main__.py"
       ],
       "priority": 2,
@@ -52,12 +62,22 @@
     },
     {
       "id": "US-003",
+      "type": "create",
       "title": "Create api_server.py with health endpoint and Qdrant client",
-      "description": "Current state: /app/zk-rag-v2/api_server/__init__.py and __main__.py exist from US-002. api_server.py does not exist.\n\nWhat to build: Create /app/zk-rag-v2/api_server/api_server.py with:\n- FastAPI app\n- Global Qdrant client: QdrantClient(url='http://10.120.60.102:6333') \u2014 created once at module level\n- GET /health \u2014 returns {status: 'ok', qdrant: 'connected', model: 'Qwen/Qwen3-Embedding-0.6B', bm25: 'loaded' or 'missing'}\n- At startup: verify Qdrant path exists. If not, exit with code 1 and message 'Qdrant not reachable at http://10.120.60.102:6333'\n\nDo NOT add any /api/ endpoints yet.\nDo NOT add the embedding model import yet.",
+      "description": "Current state: /app/zk-rag-v2/api_server/__init__.py and __main__.py exist from US-002. api_server.py does not exist.\n\nWhat to build: Create /app/zk-rag-v2/api_server/api_server.py with:\n- FastAPI app\n- Global Qdrant client: QdrantClient(url='http://10.120.60.102:6333') -- created once at module level\n- GET /health -- returns {status: 'ok', qdrant: 'connected', model: 'Qwen/Qwen3-Embedding-0.6B', bm25: 'loaded' or 'missing'}\n- At startup: verify Qdrant path exists. If not, exit with code 1 and message 'Qdrant not reachable at http://10.120.60.102:6333'\n\nDo NOT add any /api/ endpoints yet.\nDo NOT add the embedding model import yet.",
+      "target_file": "/app/zk-rag-v2/api_server/api_server.py",
+      "output_file": "/app/zk-rag-v2/api_server/api_server.py",
+      "preserve": [
+        "Do NOT add /api/ endpoints -- those come in later stories",
+        "Do NOT import or load the embedding model -- that is US-005/US-006"
+      ],
       "acceptanceCriteria": [
         "python3 -m py_compile /app/zk-rag-v2/api_server/api_server.py",
         "cd /app/zk-rag-v2 && python3 -c 'from api_server.api_server import app; print(\"import ok\")'",
         "curl -s http://127.0.0.1:8100/health | python3 -c 'import sys,json; d=json.load(sys.stdin); assert d[\"status\"]==\"ok\", d'"
+      ],
+      "qualityChecks": [
+        "python3 -m py_compile /app/zk-rag-v2/api_server/api_server.py"
       ],
       "priority": 3,
       "passes": false,
@@ -72,12 +92,22 @@
     },
     {
       "id": "US-004",
+      "type": "create",
       "title": "Add GET /api/collections endpoints",
-      "description": "Current state: /app/zk-rag-v2/api_server/api_server.py exists with GET /health from US-003. No /api/collections endpoints exist.\n\nWhat to add to api_server.py:\n1. GET /api/collections \u2014 list all collections (army, navy, marines, coast_guard, air_force, other). For each: {name, vector_count, vector_dim, embedding_model, doc_ids, chunk_count}. Use client.get_collections() and client.scroll() with limit=10000 to enumerate points.\n2. GET /api/collections/{collection} \u2014 single collection info. Return 404 if collection does not exist.\n\nDo NOT add any other endpoints. Do NOT modify /health.",
+      "description": "Current state: /app/zk-rag-v2/api_server/api_server.py exists with GET /health from US-003. No /api/collections endpoints exist.\n\nWhat to add to api_server.py:\n1. GET /api/collections -- list all collections (army, navy, marines, coast_guard, air_force, other). For each: {name, vector_count, vector_dim, embedding_model, doc_ids, chunk_count}. Use client.get_collections() and client.scroll() with limit=10000 to enumerate points.\n2. GET /api/collections/{collection} -- single collection info. Return 404 if collection does not exist.\n\nDo NOT add any other endpoints. Do NOT modify /health.",
+      "target_file": "/app/zk-rag-v2/api_server/api_server.py",
+      "output_file": "/app/zk-rag-v2/api_server/api_server.py",
+      "preserve": [
+        "GET /health must remain unchanged",
+        "No other /api/ endpoints besides /api/collections"
+      ],
       "acceptanceCriteria": [
         "python3 -m py_compile /app/zk-rag-v2/api_server/api_server.py",
         "curl -s http://127.0.0.1:8100/api/collections | python3 -c 'import sys,json; d=json.load(sys.stdin); assert isinstance(d, list), \"not a list\"; print(\"collections ok:\", len(d))'",
         "curl -s http://127.0.0.1:8100/api/collections/army | python3 -c 'import sys,json; d=json.load(sys.stdin); assert \"vector_count\" in d, \"no vector_count\"; print(\"army collection ok\")'"
+      ],
+      "qualityChecks": [
+        "python3 -m py_compile /app/zk-rag-v2/api_server/api_server.py"
       ],
       "priority": 4,
       "passes": false,
@@ -93,12 +123,22 @@
     },
     {
       "id": "US-005",
+      "type": "create",
       "title": "Add lazy embedding model loader module",
-      "description": "Current state: /app/zk-rag-v2/api_server/api_server.py exists with /health and /api/collections. No embedding model is loaded anywhere.\n\nWhat to build: Create /app/zk-rag-v2/api_server/embedding.py with:\n- load_embedding_model() -> Callable[[str], numpy.ndarray]\n  - Loads sentence_transformers model 'Qwen/Qwen3-Embedding-0.6B' on first call\n  - Returns a sync function that takes a string and returns a 1024-dim numpy array with normalize_embeddings=True\n  - Subsequent calls return the already-loaded model (no re-loading)\n- Module-level global: _embedding_model = None\n- The returned function must be thread-safe\n\nDo NOT use async for the model loading or encode function \u2014 keep it synchronous.\nDo NOT call this from api_server.py yet \u2014 that comes in US-006.",
+      "description": "Current state: /app/zk-rag-v2/api_server/api_server.py exists with /health and /api/collections. No embedding model is loaded anywhere.\n\nWhat to build: Create /app/zk-rag-v2/api_server/embedding.py with:\n- load_embedding_model() -> Callable[[str], numpy.ndarray]\n  - Loads sentence_transformers model 'Qwen/Qwen3-Embedding-0.6B' on first call\n  - Returns a sync function that takes a string and returns a 1024-dim numpy array with normalize_embeddings=True\n  - Subsequent calls return the already-loaded model (no re-loading)\n- Module-level global: _embedding_model = None\n- The returned function must be thread-safe\n\nDo NOT use async for the model loading or encode function -- keep it synchronous.\nDo NOT call this from api_server.py yet -- that comes in US-006.",
+      "target_file": "/app/zk-rag-v2/api_server/embedding.py",
+      "output_file": "/app/zk-rag-v2/api_server/embedding.py",
+      "preserve": [
+        "Do NOT modify api_server.py",
+        "Do NOT call load_embedding_model from api_server.py -- that is US-006"
+      ],
       "acceptanceCriteria": [
         "python3 -m py_compile /app/zk-rag-v2/api_server/embedding.py",
         "cd /app/zk-rag-v2 && python3 -c 'from api_server.embedding import load_embedding_model; fn=load_embedding_model(); v=fn(\"test\"); print(\"vec shape:\", v.shape, \"dtype:\", v.dtype)'",
         "cd /app/zk-rag-v2 && python3 -c 'from api_server.embedding import load_embedding_model; fn=load_embedding_model(); v1=fn(\"hello world\"); v2=fn(\"hello world\"); import numpy as np; assert np.allclose(v1, v2), \"not deterministic\"; print(\"deterministic ok\")'"
+      ],
+      "qualityChecks": [
+        "python3 -m py_compile /app/zk-rag-v2/api_server/embedding.py"
       ],
       "priority": 5,
       "passes": false,
@@ -113,11 +153,23 @@
     },
     {
       "id": "US-006",
-      "title": "Implement POST /api/query \u2014 vector search only",
+      "type": "create",
+      "title": "Implement POST /api/query -- vector search only",
       "description": "Current state: /app/zk-rag-v2/api_server/api_server.py exists with /health and /api/collections. /app/zk-rag-v2/api_server/embedding.py exists with load_embedding_model() from US-005.\n\nWhat to add: POST /api/query with vector-only search (hybrid comes in US-007).\n\nRequest body: {query: str, top_k: int (default 5, max 50), collection: str (one of the 6 collections)}\n\nBehaviour:\n1. Lazy-load embedding model via load_embedding_model() on first query\n2. Embed query text -> 1024-dim numpy vector\n3. Search Qdrant: client.query_points(collection=collection, query=vector, limit=top_k, with_payload=True)\n4. Return full payload for each result with added 'score' field\n\nResponse: {results: [payload objects with 'score' added], query: str, collection: str, total: int}\n\nCollection must be one of the 6 known collections. No '*' wildcard in this story.\n\nDo NOT add BM25 or hybrid search yet. Do NOT add '*' collection support yet.",
+      "target_file": "/app/zk-rag-v2/api_server/api_server.py",
+      "output_file": "/app/zk-rag-v2/api_server/api_server.py",
+      "preserve": [
+        "GET /health must remain unchanged",
+        "GET /api/collections must remain unchanged",
+        "Do NOT add BM25 or hybrid search -- that is US-007",
+        "Do NOT add collection='*' support -- that is US-008"
+      ],
       "acceptanceCriteria": [
         "python3 -m py_compile /app/zk-rag-v2/api_server/api_server.py",
         "curl -s -X POST http://127.0.0.1:8100/api/query -H 'Content-Type: application/json' -d '{\"query\": \"prisoner of war handling\", \"top_k\": 3, \"collection\": \"army\"}' | python3 -c 'import sys,json; d=json.load(sys.stdin); assert len(d[\"results\"]) > 0, \"no results\"; print(\"query ok, got\", len(d[\"results\"]), \"results\")'"
+      ],
+      "qualityChecks": [
+        "python3 -m py_compile /app/zk-rag-v2/api_server/api_server.py"
       ],
       "priority": 6,
       "passes": false,
@@ -134,12 +186,24 @@
     },
     {
       "id": "US-007",
+      "type": "create",
       "title": "Add BM25 search and hybrid scoring to /api/query",
       "description": "Current state: /app/zk-rag-v2/api_server/api_server.py exists with POST /api/query vector-only from US-006. No BM25 support exists.\n\nWhat to add to POST /api/query:\n\n1. Load BM25 index from /data/military-documents/bm25_index.pkl at module level. If file missing, log warning once and set bm25_index = None.\n\n2. New request field: 'hybrid' (bool, default true). If hybrid=false, skip BM25.\n\n3. If hybrid=true and bm25_index is not None:\n   a. Run vector search -> ranked list V\n   b. Run BM25 search: tokenize query, score all chunks against query, take top 50 -> ranked list B\n   c. Merge V and B using RRF formula: score = 0.5 * (1/(60 + vector_rank)) + 0.5 * (1/(60 + bm25_rank))\n   d. Return merged top-k results\n\n4. If hybrid=true but bm25_index is None: fall back to vector-only, log one warning.\n\nDo NOT add collection='*' support yet.",
+      "target_file": "/app/zk-rag-v2/api_server/api_server.py",
+      "output_file": "/app/zk-rag-v2/api_server/api_server.py",
+      "preserve": [
+        "GET /health must remain unchanged",
+        "GET /api/collections must remain unchanged",
+        "POST /api/query with vector-only must remain unchanged when hybrid=false",
+        "Do NOT add collection='*' support -- that is US-008"
+      ],
       "acceptanceCriteria": [
         "python3 -m py_compile /app/zk-rag-v2/api_server/api_server.py",
         "curl -s -X POST http://127.0.0.1:8100/api/query -H 'Content-Type: application/json' -d '{\"query\": \"prisoner of war handling\", \"top_k\": 3, \"collection\": \"army\", \"hybrid\": false}' | python3 -c 'import sys,json; d=json.load(sys.stdin); print(\"vector-only ok\")'",
         "curl -s -X POST http://127.0.0.1:8100/api/query -H 'Content-Type: application/json' -d '{\"query\": \"prisoner of war handling\", \"top_k\": 3, \"collection\": \"army\", \"hybrid\": true}' | python3 -c 'import sys,json; d=json.load(sys.stdin); print(\"hybrid ok\")'"
+      ],
+      "qualityChecks": [
+        "python3 -m py_compile /app/zk-rag-v2/api_server/api_server.py"
       ],
       "priority": 7,
       "passes": false,
@@ -155,11 +219,23 @@
     },
     {
       "id": "US-008",
+      "type": "create",
       "title": "Add collection='*' cross-collection search to /api/query",
       "description": "Current state: /app/zk-rag-v2/api_server/api_server.py exists with POST /api/query supporting vector-only and hybrid for a single named collection.\n\nWhat to add: Support collection='*' in POST /api/query.\n\nBehaviour for collection='*':\n1. Run the search (vector or hybrid) against all 6 collections\n2. Collect all results, deduplicate by chunk_id\n3. Merge all results into a single ranked list and return top_k\n\nFor the response: collection field should be '*'.\n\nDo NOT modify the single-collection search behaviour. Do NOT add any new endpoints.",
+      "target_file": "/app/zk-rag-v2/api_server/api_server.py",
+      "output_file": "/app/zk-rag-v2/api_server/api_server.py",
+      "preserve": [
+        "GET /health must remain unchanged",
+        "GET /api/collections must remain unchanged",
+        "Single-collection POST /api/query must remain unchanged",
+        "Do NOT add any new endpoints"
+      ],
       "acceptanceCriteria": [
         "python3 -m py_compile /app/zk-rag-v2/api_server/api_server.py",
         "curl -s -X POST http://127.0.0.1:8100/api/query -H 'Content-Type: application/json' -d '{\"query\": \"tactical procedures\", \"top_k\": 5, \"collection\": \"*\"}' | python3 -c 'import sys,json; d=json.load(sys.stdin); assert d[\"collection\"]==\"*\", \"wrong collection\"; assert len(d[\"results\"]) > 0, \"no results\"; print(\"star collection ok, got\", len(d[\"results\"]), \"results\")'"
+      ],
+      "qualityChecks": [
+        "python3 -m py_compile /app/zk-rag-v2/api_server/api_server.py"
       ],
       "priority": 8,
       "passes": false,
@@ -174,12 +250,24 @@
     },
     {
       "id": "US-009",
+      "type": "create",
       "title": "Implement GET /api/doc and GET /api/context endpoints",
-      "description": "Current state: /app/zk-rag-v2/api_server/api_server.py exists with /health, /api/collections, POST /api/query from US-003 through US-008.\n\nWhat to add:\n\n1. GET /api/doc/{doc_id} \u2014 scroll Qdrant for all points with matching doc_id, return unique metadata fields from the first point. Return 404 if not found.\n\n2. GET /api/context?doc_id=X&chunk_index=N&collection=Y&window=1 \u2014 fetch points for the given doc_id in the given collection. Return chunks at positions [chunk_index-window, chunk_index, chunk_index+window] clamped to valid range.\n\nDo NOT add any other endpoints. Do NOT add static file serving.",
+      "description": "Current state: /app/zk-rag-v2/api_server/api_server.py exists with /health, /api/collections, POST /api/query from US-003 through US-008.\n\nWhat to add:\n\n1. GET /api/doc/{doc_id} -- scroll Qdrant for all points with matching doc_id, return unique metadata fields from the first point. Return 404 if not found.\n\n2. GET /api/context?doc_id=X&chunk_index=N&collection=Y&window=1 -- fetch points for the given doc_id in the given collection. Return chunks at positions [chunk_index-window, chunk_index, chunk_index+window] clamped to valid range.\n\nDo NOT add any other endpoints. Do NOT add static file serving.",
+      "target_file": "/app/zk-rag-v2/api_server/api_server.py",
+      "output_file": "/app/zk-rag-v2/api_server/api_server.py",
+      "preserve": [
+        "GET /health must remain unchanged",
+        "GET /api/collections must remain unchanged",
+        "POST /api/query must remain unchanged",
+        "Do NOT add static file serving -- that is US-011"
+      ],
       "acceptanceCriteria": [
         "python3 -m py_compile /app/zk-rag-v2/api_server/api_server.py",
         "curl -s http://127.0.0.1:8100/api/doc/0a21e7692759f40c37bdc33b0a2d1f38aa6de9a35efc6f83eac8d4b7f8a3ae1a | python3 -c 'import sys,json; d=json.load(sys.stdin); print(\"doc endpoint ok\")'",
         "curl -s 'http://127.0.0.1:8100/api/context?doc_id=0a21e7692759f40c37bdc33b0a2d1f38aa6de9a35efc6f83eac8d4b7f8a3ae1a&chunk_index=5&collection=army&window=1' | python3 -c 'import sys,json; d=json.load(sys.stdin); assert \"results\" in d, \"no results\"; print(\"context endpoint ok, got\", len(d[\"results\"]), \"chunks\")'"
+      ],
+      "qualityChecks": [
+        "python3 -m py_compile /app/zk-rag-v2/api_server/api_server.py"
       ],
       "priority": 9,
       "passes": false,
@@ -195,13 +283,26 @@
     },
     {
       "id": "US-010",
+      "type": "create",
       "title": "Implement GET /api/images, GET /api/manifest, GET /api/openapi.json, GET /query_stats",
-      "description": "Current state: /app/zk-rag-v2/api_server/api_server.py exists with all endpoints from US-003 through US-009.\n\nWhat to add:\n\n1. GET /api/images/{doc_id}/{page_num} \u2014 return list of image filenames for that page. Reads from /data/military-documents/images/{doc_id}/.\n\n2. GET /api/manifest \u2014 return {endpoints: [{path, method, description, auth_required}]}.\n\n3. GET /api/openapi.json \u2014 wire FastAPI's auto-generated /openapi.json to /api/openapi.json.\n\n4. GET /query_stats \u2014 return {total_queries: N, avg_latency_ms: X} with in-memory counters.\n\nDo NOT add static file mounting for /images/ path yet. Do NOT modify any existing endpoints.",
+      "description": "Current state: /app/zk-rag-v2/api_server/api_server.py exists with all endpoints from US-003 through US-009.\n\nWhat to add:\n\n1. GET /api/images/{doc_id}/{page_num} -- return list of image filenames for that page. Reads from /data/military-documents/images/{doc_id}/.\n\n2. GET /api/manifest -- return {endpoints: [{path, method, description, auth_required}]}.\n\n3. GET /api/openapi.json -- wire FastAPI's auto-generated /openapi.json to /api/openapi.json.\n\n4. GET /query_stats -- return {total_queries: N, avg_latency_ms: X} with in-memory counters.\n\nDo NOT add static file mounting for /images/ path yet. Do NOT modify any existing endpoints.",
+      "target_file": "/app/zk-rag-v2/api_server/api_server.py",
+      "output_file": "/app/zk-rag-v2/api_server/api_server.py",
+      "preserve": [
+        "GET /health must remain unchanged",
+        "GET /api/collections must remain unchanged",
+        "POST /api/query must remain unchanged",
+        "GET /api/doc and GET /api/context must remain unchanged",
+        "Do NOT add static file mounting for /images/ path -- that is US-011"
+      ],
       "acceptanceCriteria": [
         "python3 -m py_compile /app/zk-rag-v2/api_server/api_server.py",
         "curl -s http://127.0.0.1:8100/api/manifest | python3 -c 'import sys,json; d=json.load(sys.stdin); assert \"endpoints\" in d, \"no endpoints key\"; print(\"manifest ok,\", len(d[\"endpoints\"]), \"endpoints\")'",
         "curl -s http://127.0.0.1:8100/api/openapi.json | python3 -c 'import sys,json; d=json.load(sys.stdin); assert d[\"openapi\"].startswith(\"3.\"), \"not openapi 3\"; print(\"openapi ok\")'",
         "curl -s http://127.0.0.1:8100/query_stats | python3 -c 'import sys,json; d=json.load(sys.stdin); assert \"total_queries\" in d, \"no total_queries\"; print(\"query_stats ok\")'"
+      ],
+      "qualityChecks": [
+        "python3 -m py_compile /app/zk-rag-v2/api_server/api_server.py"
       ],
       "priority": 10,
       "passes": false,
@@ -216,11 +317,21 @@
     },
     {
       "id": "US-011",
+      "type": "create",
       "title": "Add static file mount for /images/ serving",
       "description": "Current state: /app/zk-rag-v2/api_server/api_server.py exists with all endpoints from US-003 through US-010.\n\nWhat to add: One line:\napp.mount('/images', StaticFiles(directory='/data/military-documents/images'), name='images')\n\nImport: from fastapi.staticfiles import StaticFiles\n\nAfter this, GET /images/{doc_id}/{filename} serves image files from the filesystem.\n\nDo NOT add any new endpoints beyond the static mount. Do NOT modify existing endpoints.",
+      "target_file": "/app/zk-rag-v2/api_server/api_server.py",
+      "output_file": "/app/zk-rag-v2/api_server/api_server.py",
+      "preserve": [
+        "All existing endpoints must remain unchanged",
+        "Do NOT add any new API endpoints"
+      ],
       "acceptanceCriteria": [
         "python3 -m py_compile /app/zk-rag-v2/api_server/api_server.py",
         "curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8100/images/ 2>/dev/null | python3 -c 'import sys; code=int(sys.stdin.read().strip()); assert code in (200,404), f\"unexpected code {code}\"; print(\"static mount responds, code:\", code)'"
+      ],
+      "qualityChecks": [
+        "python3 -m py_compile /app/zk-rag-v2/api_server/api_server.py"
       ],
       "priority": 11,
       "passes": false,
@@ -235,14 +346,25 @@
     },
     {
       "id": "US-012",
+      "type": "create",
       "title": "Write systemd unit and install script for API server",
       "description": "Current state: /app/zk-rag-v2/api_server/api_server.py exists with all endpoints from US-003 through US-011.\n\nWhat to build: Create two files:\n\n1. /app/zk-rag-v2/api_server/zk-rag-api.service\n2. /app/zk-rag-v2/api_server/install.sh\n\nzk-rag-api.service: [Unit] with After=Wants=qdrant.service, [Service] Type=simple User=blockops ExecStart=/usr/bin/python3 -m api_server Restart=always StandardOutput=journal StandardError=journal, [Install] WantedBy=multi-user.target\n\ninstall.sh: copy service file, daemon-reload, enable, start, print status. Add a comment block at top describing steps for VPS deployment.\n\nDo NOT run the install script. Do NOT create any Python files.",
+      "target_file": "/app/zk-rag-v2/api_server/zk-rag-api.service",
+      "output_file": "/app/zk-rag-v2/api_server/zk-rag-api.service",
+      "preserve": [
+        "Do NOT modify api_server.py or any Python files",
+        "Do NOT run the install script"
+      ],
       "acceptanceCriteria": [
         "test -f /app/zk-rag-v2/api_server/zk-rag-api.service",
         "python3 -c \"import configparser; c=configparser.ConfigParser(); c.read('/app/zk-rag-v2/api_server/zk-rag-api.service'); assert c.has_section('Service'), 'no Service section'; assert 'Restart=always' in dict(c['Service']), 'no restart'\"",
         "test -f /app/zk-rag-v2/api_server/install.sh",
         "grep -q 'systemctl daemon-reload' /app/zk-rag-v2/api_server/install.sh",
         "grep -q 'VPS deployment' /app/zk-rag-v2/api_server/install.sh"
+      ],
+      "qualityChecks": [
+        "test -f /app/zk-rag-v2/api_server/zk-rag-api.service",
+        "test -f /app/zk-rag-v2/api_server/install.sh"
       ],
       "priority": 12,
       "passes": false,
@@ -257,12 +379,22 @@
     },
     {
       "id": "US-013",
+      "type": "create",
       "title": "Write integration tests for API server",
       "description": "Current state: /app/zk-rag-v2/api_server/ directory exists with api_server.py and embedding.py from US-002 through US-012. No test file exists.\n\nWhat to build: Create /app/zk-rag-v2/tests/test_api_server.py using pytest and FastAPI TestClient.\n\nTests: test_health, test_collections_list, test_query_vector_only, test_query_hybrid, test_query_star_collection, test_query_top_k, test_doc_metadata, test_context_window, test_openapi_spec.\n\nUse: from fastapi.testclient import TestClient; from api_server.api_server import app\nFor doc_id: 0a21e7692759f40c37bdc33b0a2d1f38aa6de9a35efc6f83eac8d4b7f8a3ae1a (army collection).\n\nRun with: cd /app/zk-rag-v2 && PYTHONPATH=/app/zk-rag-v2 python3 -m pytest tests/test_api_server.py -v",
+      "target_file": "/app/zk-rag-v2/tests/test_api_server.py",
+      "output_file": "/app/zk-rag-v2/tests/test_api_server.py",
+      "preserve": [
+        "Do NOT modify api_server.py or embedding.py",
+        "Tests should use mocking where needed so they can run without live Qdrant"
+      ],
       "acceptanceCriteria": [
         "python3 -m py_compile /app/zk-rag-v2/tests/test_api_server.py",
         "cd /app/zk-rag-v2 && PYTHONPATH=/app/zk-rag-v2 python3 -m pytest tests/test_api_server.py -v --tb=short 2>&1 | tail -20 | grep -E 'PASSED|FAILED|ERROR|test_'",
         "cd /app/zk-rag-v2 && PYTHONPATH=/app/zk-rag-v2 python3 -m pytest tests/test_api_server.py -q 2>&1 | tail -5"
+      ],
+      "qualityChecks": [
+        "python3 -m py_compile /app/zk-rag-v2/tests/test_api_server.py"
       ],
       "priority": 13,
       "passes": false,
