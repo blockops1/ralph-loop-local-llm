@@ -25,7 +25,9 @@ llama-server :8090 ◄─── host net ────►  localhost:8090
 config.yaml         ───────────────►   /app/config.yaml (read at runtime)
 PROMPT*.md          ───────────────►   /app/PROMPT*.md
 ralph.sh            ──── archived ────►  do not use
-ralph.py            ──── calls ────►   loop_runner.py → run_all_through_pipeline()
+pipeline_runner.py  ──── ENTRYPOINT ────► stage_create() → ralph.run_story_loop(type=create)
+                                              stage_critique() → raw model call
+                                              stage_fix() → ralph.run_story_loop(type=rework)
 ```
 
 **LLM backend:** `llama-server` on Mac Mini host at `http://localhost:8090/v1` (container uses host networking via `network_mode: host`)
@@ -574,7 +576,7 @@ ls ~/ralph/skills/  # should not exist
 
 ### PRD Schema
 
-**Root:** `{"userStories": [...]}` — **never `"stories"`** (ralph.py L572 silently skips).
+**Root:** `{"userStories": [...]}` — **never `"stories"`** (prd_manager.py reads this field).
 
 ```json
 {
