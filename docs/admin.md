@@ -1,6 +1,6 @@
 # Ralph Loop — Admin Guide
 
-**Version:** 0.7.0 (2026-04-17)
+**Version:** 0.8.0 (2026-04-17)
 **Canonical skills:** `~/.hermes/skills/openclaw-imports/ralph-loop/` and `ralph-prd/`
 **Docker project:** `~/ralph/` (Ralph's source code + runtime workspace)
 
@@ -71,12 +71,90 @@ prd.json updated → next story
 
 ### Prerequisites
 
-1. **llama-server running on host** (port 8090, managed by launchd):
+1. **llama-server running on host** (port 8090) — REQUIRED before running Ralph
+
+   **Recommended model:** `Qwen3.5-27B-Q6_K.gguf`
+
+   **Install llama-server:**
+   ```bash
+   brew install llama.cpp
+   ```
+
+   **Create the launchd plist** at `~/Library/LaunchAgents/ai.hermes.llama-server-opus.plist`:
+
+   > **NOTE:** Update the model path to wherever `Qwen3.5-27B-Q6_K.gguf` is stored on your system. The path below is for the Mac Mini at `~/.cache/llama.cpp/` or `~/llama-models/`.
+   ```xml
+   <?xml version="1.0" encoding="UTF-8"?>
+   <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+   <plist version="1.0">
+   <dict>
+       <key>Label</key>
+       <string>ai.hermes.llama-server-opus</string>
+       <key>ProgramArguments</key>
+       <array>
+           <string>/opt/homebrew/bin/llama-server</string>
+           <string>--model</string>
+           <string>/Users/yourname/llama-models/Qwen3.5-27B-Q6_K.gguf</string>
+           <string>--port</string>
+           <string>8090</string>
+           <string>--host</string>
+           <string>127.0.0.1</string>
+           <string>-ngl</string>
+           <string>99</string>
+           <string>--ctx-size</string>
+           <string>131072</string>
+           <string>--batch-size</string>
+           <string>512</string>
+           <string>--ubatch-size</string>
+           <string>256</string>
+           <string>--flash-attn</string>
+           <string>on</string>
+           <string>--parallel</string>
+           <string>1</string>
+           <string>--alias</string>
+           <string>Qwen3.5-27B</string>
+       </array>
+       <key>RunAtLoad</key>
+       <false/>
+       <key>KeepAlive</key>
+       <false/>
+       <key>StandardOutPath</key>
+       <string>/Users/yourname/logs/llama-server-opus.log</string>
+       <key>StandardErrorPath</key>
+       <string>/Users/yourname/logs/llama-server-opus.err</string>
+       <key>EnvironmentVariables</key>
+       <dict>
+           <key>HOME</key>
+           <string>/Users/jill</string>
+       </dict>
+   </dict>
+   </plist>
+   ```
+
+   **Key llama-server flags explained:**
+   | Flag | Value | Purpose |
+   |------|-------|---------|
+   | `-ngl 99` | 99 | Load all layers to GPU |
+   | `--ctx-size` | 131072 | 128K context window |
+   | `--batch-size` | 512 | Prompt processing batch |
+   | `--ubatch-size` | 256 | Generation batch |
+   | `--flash-attn` | on | Flash attention for speed |
+   | `--parallel` | 1 | Single sequence for deterministic output |
+   | `--alias` | Qwen3.5-27B | Display name in /v1/models |
+
+   **Start and verify:**
+   ```bash
+   launchctl load ~/Library/LaunchAgents/ai.hermes.llama-server-opus.plist
+   curl -s http://127.0.0.1:8090/v1/models | jq  # should list Qwen3.5-27B
+   ```
+
+   **Status check:**
    ```bash
    launchctl list | grep llama-server-opus
    curl -s http://127.0.0.1:8090/health  # should return {"status":"ok"}
    ```
-   Restart if needed:
+
+   **Restart if needed:**
    ```bash
    launchctl unload ~/Library/LaunchAgents/ai.hermes.llama-server-opus.plist
    launchctl load ~/Library/LaunchAgents/ai.hermes.llama-server-opus.plist
@@ -645,7 +723,8 @@ Review git log + commits in projects/{slug}/
 
 | Version | Date | Key Changes |
 |---------|------|-------------|
-| 0.7.0 | 2026-04-17 | Added: tool usage rules, known issues table, context pre-loading, common failures + fixes, CRITIQUE timeout prevention, sequential execution rule, branch policy, pre-run validation checklist, full PRD schema reference. Fixed: ralph.sh entry point clarification. Skills moved to openclaw-imports canonical location. |
+| 0.8.0 | 2026-04-17 | Full llama-server setup: launchd plist, model path note, flag explanations, start/verify commands |
+| 0.7.0 | 2026-04-17 | Added: tool usage rules, known issues table, common failures + fixes, CRITIQUE timeout prevention, PRD schema, validation checklist. Skills moved to openclaw-imports canonical. |
 | 0.6.0 | 2026-04-16 | Full 3-stage pipeline documentation, PRD path convention, production workflow, stage isolation principle |
 | 0.5.0 | 2026-04-05 | Docker containerization — minimal blast radius, volume-persisted projects/logs |
 | 0.4.0 | 2026-03-19 | Subprocess story runner, prd_linter, contextFiles pre-loading |
