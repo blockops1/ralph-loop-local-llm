@@ -1,10 +1,10 @@
 # Ralph Loop Configuration
 #
 # This config is for running Ralph INSIDE Docker.
-# Container uses network_mode: host, so 127.0.0.1 inside the container
-# is the Mac Mini host itself. llama-server runs on the host at port 8090.
+# The container uses network_mode: host, so llama-server running
+# on the host is accessible at localhost:8090 from inside the container.
 
-model_url: "http://127.0.0.1:8090/v1"
+model_url: "http://localhost:8090/v1"
 model_id: "Qwen3.5-27B-Q6_K.gguf"
 
 # Loop limits

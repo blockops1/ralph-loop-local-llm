@@ -13,7 +13,7 @@ Usage:
 
 Environment:
     Reads config from ralph/config.yaml
-    Projects: ralph/projects/<slug>/prd.json
+    Projects: projects/<slug>/prd.json
 """
 
 import argparse
@@ -777,7 +777,7 @@ def notify(msg: str, log: logging.Logger) -> None:
 
 def main():
     parser = argparse.ArgumentParser(description="Ralph Loop - autonomous coding agent")
-    parser.add_argument("slug", nargs="?", help="Project slug (matches ralph/projects/<slug>/)")
+    parser.add_argument("slug", nargs="?", help="Project slug (matches projects/<slug>/)")
     parser.add_argument("--story", help="Force a specific story ID")
     parser.add_argument("--dry-run", action="store_true", help="Plan only - don't call model or commit")
     parser.add_argument("--max-iterations", type=int, default=None)
