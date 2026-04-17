@@ -1,1 +1,0 @@
-2026-04-16 19:09:11,928 WARNING Pipeline already running for 'rag-query-api' — .pipeline.lock exists. Exiting.
