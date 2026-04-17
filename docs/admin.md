@@ -572,6 +572,34 @@ ls ~/ralph/skills/  # should not exist
 
 ---
 
+## PRD Authoring Discipline
+
+**Core rule: One story = one idea/function/concept. Multiple ideas in one story = wrong.**
+
+Bundling multiple concepts into a single story is the most common cause of failures in Ralph's pipeline. When a story contains more than one idea:
+- The acceptance criteria become ambiguous or unmeasurable
+- A single failure can block unrelated features
+- The CRITIQUE stage cannot evaluate it properly
+- Partial rollbacks become impossible
+
+### What a well-scoped story looks like
+
+- Description fits in ~50–100 lines (150 max)
+- One clear goal: "add X to Y" or "fix Z behavior"
+- Acceptance criteria are specific and testable (run a command, verify output)
+- The file touched is obvious
+
+### Signs a story is too large
+
+- Description exceeds ~150 lines
+- Contains "also..." or "while we're at it..."
+- Multiple `target_file` or `output_file` entries
+- Acceptance criteria list is long or compound
+
+**When in doubt: split.** Ralph handles more stories faster than it handles failed large ones. Five 50-line stories beat one 250-line story every time.
+
+---
+
 ## PRD Reference
 
 ### PRD Schema
