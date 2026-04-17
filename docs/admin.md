@@ -1,6 +1,6 @@
 # Ralph Loop — Admin Guide
 
-**Version:** 0.9.0 (2026-04-17)
+**Version:** 0.10.0 (2026-04-17)
 **Canonical skills:** `~/.hermes/skills/openclaw-imports/ralph-loop/` and `ralph-prd/`
 **Docker project:** `~/ralph/` (Ralph's source code + runtime workspace)
 
@@ -221,7 +221,7 @@ prd.json updated → next story
 Key behavior:
 - `docker compose run --rm` cleans up the container after each run
 - `projects/` and `logs/` are mounted from host
-- llama-server is reached at `host.docker.internal:8090` (configured in `config.yaml`)
+- llama-server is reached at `127.0.0.1:8090` (configured in `config.yaml`)  # container uses host networking
 - The container uses host networking (`network_mode: host` in docker-compose.yml)
 
 ### About ralph.sh
@@ -467,7 +467,7 @@ If NO (greenfield/sandbox): target files directly.
 ├── tools.py                      # Tool registry + execution (git_commit uses temp file, no dd)
 ├── ralph.py                      # Legacy orchestrator (used by archived ralph.sh)
 ├── config.yaml                   # Model URL, limits, timeouts
-│                                #   model_url: http://host.docker.internal:8090/v1 (Docker)
+│                                #   model_url: http://127.0.0.1:8090/v1 (Docker + host networking)
 │                                #   For native: http://localhost:8090/v1
 ├── PROMPT.md                     # CREATE stage system prompt
 ├── PROMPT-critique.md            # CRITIQUE stage system prompt
@@ -516,7 +516,7 @@ After copying to production:
 
 | Setting | Value | Notes |
 |---------|-------|-------|
-| `model_url` | `http://host.docker.internal:8090/v1` | Container networking — llama-server on host |
+| `model_url` | `http://127.0.0.1:8090/v1` | Container host networking — llama-server on Mac Mini host |
 | `model_id` | `Qwen3.5-27B-Q6_K.gguf` | Must match the loaded model |
 | `max_tokens` | `16384` | Per-model-call token limit |
 | `max_context_tokens` | `120000` | ~11K headroom under 131072 ctx |
@@ -749,6 +749,7 @@ Review git log + commits in projects/{slug}/
 
 | Version | Date | Key Changes |
 |---------|------|-------------|
+| 0.10.0 | 2026-04-17 | ralph.sh archived; host.docker.internal references replaced with 127.0.0.1 (container uses host networking); config.yaml comment corrected |
 | 0.9.0 | 2026-04-17 | docker compose run --rm ralph {slug} is now the primary launch command; ralph.sh archived; pipeline_runner.py clarified as the Dockerfile ENTRYPOINT |
 | 0.8.0 | 2026-04-17 | Full llama-server setup: launchd plist, model path note, flag explanations, start/verify commands |
 | 0.7.0 | 2026-04-17 | Added: tool usage rules, known issues table, common failures + fixes, CRITIQUE timeout prevention, PRD schema, validation checklist. Skills moved to openclaw-imports canonical. |
