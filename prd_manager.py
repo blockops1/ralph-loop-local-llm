@@ -143,6 +143,36 @@ def mark_story_blocked(prd: dict, story_id: str, error: str = "") -> dict:
     return prd
 
 
+def mark_story_blocked_cascade(prd: dict, story_id: str, error: str = "", max_attempts: int = 3) -> dict:
+    """
+    Mark a story as permanently blocked AND cascade block to all stories that
+    depend on it (directly or transitively). Returns updated prd.
+    """
+    # First pass: collect all blocked IDs (the failed story + all its dependents)
+    blocked_ids = set()
+
+    # BFS/DFS to find all dependents of story_id
+    def collect_dependents(broken_id: str) -> None:
+        for s in prd.get("userStories", []):
+            if broken_id in s.get("dependsOn", []):
+                blocked_ids.add(s["id"])
+                collect_dependents(s["id"])
+
+    blocked_ids.add(story_id)
+    collect_dependents(story_id)
+
+    # Second pass: mark them all blocked
+    for story in prd.get("userStories", []):
+        if story["id"] in blocked_ids and story.get("status") != "blocked":
+            story["status"] = "blocked"
+            story["blockedAt"] = datetime.now(timezone.utc).isoformat()
+            reason = f"depends on blocked story {story_id}: {error[:200]}" if story["id"] != story_id else (error[:500] if error else "max attempts reached")
+            story["blockReason"] = reason
+            log.warning(f"Story {story['id']} cascade BLOCKED (depends on {story_id})")
+
+    return prd
+
+
 def get_blocked_stories(prd: dict, max_attempts: int = 3) -> list:
     """Return list of stories that have hit max_attempts without passing."""
     return [

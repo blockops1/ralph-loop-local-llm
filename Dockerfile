@@ -16,6 +16,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     unzip \
     wget \
     vim-tiny \
+    ca-certificates \
+    gnupg \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Node.js 20 LTS for Biome/JS/TS linting and formatting
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y --no-install-recommends nodejs \
+    && npm install -g @biomejs/biome \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .

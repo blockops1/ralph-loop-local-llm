@@ -53,11 +53,24 @@ Use the RIGHT tool for the job — don't route through run_command:
 | List directory | `list_dir` | `ls` |
 | Inspect JSON data | `query_json` | `jq`, `python3 -c` |
 | Run Python tests | `run_tests` | `python3 -m pytest` |
+| Update PRD story state | `python3 -m prd_update <slug> <story_id> --pass\|--fail` | `python3 -c "import json..."` (BLOCKED) |
 | Fetch public URL | `http_get` | `curl`, `wget` |
 | Copy/move files | `copy_file` | `cp`, `mv` |
 | Run arbitrary shell | `run_command` | — |
 
 EXCEPTION: `run_command` is fine for project-specific scripts (your own `*.sh`, `make`, `cargo`, etc.) and git operations.
+
+### When run_command returns a BLOCKED error
+
+If a command is blocked — e.g. `'node' is not an allowed command'` or `'inline code execution' is not an allowed command'` — do NOT retry the same command or a similar variant. A blocked error means that specific invocation form is forbidden, not that the underlying tool is unavailable.
+
+Instead:
+- For verifying files exist: use `search_files(target='files')` or `read_file`
+- For inspecting output: use the appropriate tool for the data type (read_file for files, query_json for JSON)
+- For running scripts: write the script to a file first with `write_file`, then call it directly via `run_command` (no `-e`, no `-c`)
+- For confirming a binary works: a heredoc works when a one-liner doesn't — e.g. `python3 <<'EOF'` instead of `python3 -c`
+
+Rule of thumb: one BLOCKED error → change the approach, don't iterate on the same form.
 
 ## Current Task
 

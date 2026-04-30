@@ -1,2 +1,2 @@
-0.3.0 -- TDD pattern added: test story first, implementation story second
+0.3.1 -- Cascade blocking: mark_story_blocked_cascade stops dependent stories; Node.js + Biome in Dockerfile
 0.2.0 -- 3-stage pipeline added (pipeline_runner.py)

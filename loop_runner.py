@@ -97,7 +97,7 @@ def run_all_through_pipeline(args, cfg, log, prd, slug):
     # pipeline_runner imports ralph, ralph imports loop_runner
     from prd_manager import (
         get_next_story, story_summary,
-        mark_story_done, mark_story_failed,
+        mark_story_done, mark_story_failed, mark_story_blocked_cascade, any_blocked,
         save_prd, append_progress
     )
     import ralph as _ralph_mod
@@ -134,11 +134,17 @@ def run_all_through_pipeline(args, cfg, log, prd, slug):
             log.info(f"Story {story['id']} marked complete (3-stage pipeline)")
             _ralph_mod.notify(f"✅ {story['id']} done in '{slug}' [3-stage]", log)
         else:
-            prd = mark_story_failed(prd, story['id'], summary)
+            prd = mark_story_blocked_cascade(prd, story['id'], summary, cfg.get('max_attempts_per_story', 3))
             save_prd(prd, slug)
             append_progress(slug, f"❌ {story['id']} FAILED\n{summary[:300]}")
             log.error(f"Story {story['id']} failed: {summary[:100]}")
             _ralph_mod.notify(f"❌ {story['id']} FAILED in '{slug}': {summary[:120]}", log)
+
+        # Stop early if a story is now blocked (exhausted attempts)
+        if any_blocked(prd, max_attempts=cfg.get('max_attempts_per_story', 3)):
+            log.error(f"Story {story['id']} exhausted — stopping run")
+            _ralph_mod.notify(f"🚫 Stopping run: {story['id']} exhausted", log)
+            break
 
         iteration += 1
 
