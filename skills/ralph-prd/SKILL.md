@@ -1,6 +1,6 @@
 ---
 name: ralph-prd
-description: "Write and validate Product Requirements Documents (PRDs) for the Ralph autonomous coding loop. Ralph runs as a 3-stage pipeline (CREATE → CRITIQUE → FIX) inside a Docker container. Use when: creating a prd.json for Ralph, planning a new coding project, converting a plan into Ralph format, fixing a failed story's PRD. Trigger even if the user says 'plan this for ralph', 'write the PRD', 'create prd.json', 'prepare Ralph stories', 'set up a ralph project'. Never skip this skill when writing or editing a prd.json — a bad PRD wastes hours of model time."
+description: "Write and validate Product Requirements Documents (PRDs) for the Ralph autonomous coding loop. Ralph runs as a 4-stage pipeline (CREATE -> CRITIQUE -> FIX -> QUALITY) inside a Docker container. QUALITY runs Ruff + Pyright + Desloppify and injects rework stories into the PRD. Use when: creating a prd.json for Ralph, planning a new coding project, converting a plan into Ralph format, fixing a failed story's PRD. Trigger even if the user says 'plan this for ralph', 'write the PRD', 'create prd.json', 'prepare Ralph stories', 'set up a ralph project'. Never skip this skill when writing or editing a prd.json — a bad PRD wastes hours of model time."
 tags: ["ralph", "prd", "autonomous", "coding", "planning"]
 related_skills: ["ralph-loop"]
 ---
@@ -11,7 +11,7 @@ Write PRDs that Ralph can actually execute. A bad PRD wastes hours of model time
 
 ## Ralph Execution Mode
 
-Ralph runs inside Docker as a **3-stage pipeline** (CREATE → CRITIQUE → FIX). Launch:
+Ralph runs inside Docker as a **4-stage pipeline** (CREATE -> CRITIQUE -> FIX -> QUALITY). Launch:
 
 | What | Command |
 |------|---------|
@@ -75,9 +75,9 @@ Full schema in `skills/ralph-prd/references/schema.md`.
 |-------|----------|-------|
 | `id` | Yes | Format: `US-001`, `US-002`, etc. |
 | `title` | Yes | One line — include filename if creating |
-| `type` | Yes | Must be `"create"` for 3-stage pipeline |
+| `type` | Yes | Must be `"create"` for 4-stage pipeline |
 | `description` | Yes | Must include `Current state:` section |
-| `target_file` | Yes | Container path (e.g. `/app/projects/slug/code/file.py`) |
+| `target_file` | Yes | Container path (e.g. `/app/projects/slug/file.py`) |
 | `output_file` | Yes | Same as `target_file` for create stories |
 | `preserve` | Recommended | What not to break |
 | `contextFiles` | Yes | Existing files must be here |

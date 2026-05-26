@@ -24,12 +24,12 @@ Complete reference for `prd.json` fields.
 
 ## Story Object
 
-### Fields for 3-Stage Pipeline
+### Fields for 4-Stage Pipeline
 
 | Field | Type | Required | Description |
 |-------|------|---------|-------------|
-| `type` | string | Yes | Must be `"create"` for 3-stage pipeline |
-| `target_file` | string | Yes | Path Ralph will write to (container path, e.g. `/app/projects/slug/code/file.py`) |
+| `type` | string | Yes | Must be `"create"` for 4-stage pipeline |
+| `target_file` | string | Yes | Path Ralph will write to (container path, e.g. `/app/projects/slug/file.py`) |
 | `output_file` | string | Yes | Same as `target_file` for create stories |
 | `preserve` | array | Recommended | Behaviors to keep unchanged (strings describing what not to break) |
 
@@ -59,12 +59,12 @@ Complete reference for `prd.json` fields.
   "title": "Create config.py",
   "type": "create",
   "description": "Current state: No config module exists.\n\nWhat to build: A config.py module that loads settings from environment variables with sensible defaults.\n\nConstraints: Must work with Python 3.11+.",
-  "target_file": "/app/projects/my-project/code/config.py",
-  "output_file": "/app/projects/my-project/code/config.py",
+  "target_file": "/app/projects/my-project/config.py",
+  "output_file": "/app/projects/my-project/config.py",
   "preserve": [],
   "contextFiles": [],
   "acceptanceCriteria": [
-    "python3 -m py_compile /app/projects/my-project/code/config.py",
+    "python3 -m py_compile /app/projects/my-project/config.py",
     "python3 -c \"from config import settings; assert 'host' in settings\""
   ],
   "qualityChecks": ["python3 -m py_compile {file}"],
@@ -86,13 +86,13 @@ Complete reference for `prd.json` fields.
   "title": "Add retry logic to config.py",
   "type": "create",
   "description": "Current state: config.py loads settings but has no retry logic on network failures.\n\nWhat to build: Add a `with_retry` decorator that retries network calls up to 3 times with exponential backoff.\n\nConstraints: Preserve existing `settings` object and `load()` function signature.",
-  "target_file": "/app/projects/my-project/code/config.py",
-  "output_file": "/app/projects/my-project/code/config.py",
+  "target_file": "/app/projects/my-project/config.py",
+  "output_file": "/app/projects/my-project/config.py",
   "preserve": ["settings object unchanged", "load() function signature unchanged"],
-  "contextFiles": ["/app/projects/my-project/code/config.py"],
+  "contextFiles": ["/app/projects/my-project/config.py"],
   "acceptanceCriteria": [
     "python3 -c \"from config import with_retry; print('ok')\"",
-    "python3 -m py_compile /app/projects/my-project/code/config.py"
+    "python3 -m py_compile /app/projects/my-project/config.py"
   ],
   "qualityChecks": ["python3 -m py_compile {file}"],
   "priority": 2,
@@ -113,8 +113,8 @@ Complete reference for `prd.json` fields.
   "title": "Write tests for parser.py",
   "type": "create",
   "description": "Current state: parser.py does not exist yet.\n\nWhat to build: Write test_parser.py with pytest tests for the parser module. Tests should fail gracefully until parser.py is implemented.\n\nConstraints: Use pytest. Test names should be descriptive.",
-  "target_file": "/app/projects/my-project/code/tests/test_parser.py",
-  "output_file": "/app/projects/my-project/code/tests/test_parser.py",
+  "target_file": "/app/projects/my-project/tests/test_parser.py",
+  "output_file": "/app/projects/my-project/tests/test_parser.py",
   "preserve": [],
   "contextFiles": [],
   "acceptanceCriteria": [
@@ -132,13 +132,13 @@ Complete reference for `prd.json` fields.
   "title": "Create parser.py",
   "type": "create",
   "description": "Current state: parser.py does not exist. tests/test_parser.py has failing tests.\n\nWhat to build: parser.py with a `parse_config(raw: str) -> dict` function that handles JSON and INI formats.\n\nConstraints: Must pass all tests in tests/test_parser.py.",
-  "target_file": "/app/projects/my-project/code/parser.py",
-  "output_file": "/app/projects/my-project/code/parser.py",
+  "target_file": "/app/projects/my-project/parser.py",
+  "output_file": "/app/projects/my-project/parser.py",
   "preserve": [],
-  "contextFiles": ["/app/projects/my-project/code/tests/test_parser.py"],
+  "contextFiles": ["/app/projects/my-project/tests/test_parser.py"],
   "acceptanceCriteria": [
     "cd /app/projects/my-project && python3 -m pytest tests/test_parser.py -v --tb=short",
-    "python3 -m py_compile /app/projects/my-project/code/parser.py"
+    "python3 -m py_compile /app/projects/my-project/parser.py"
   ],
   "qualityChecks": ["python3 -m py_compile {file}"],
   "priority": 4,

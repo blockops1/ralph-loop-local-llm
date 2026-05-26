@@ -1,8 +1,8 @@
 # Ralph Loop — Autonomous Coding with Local LLMs
 
-Ralph is an autonomous coding loop that runs a local LLM through structured coding tasks defined in `prd.json`. Each task goes through three isolated stages — build, critique, fix — with no memory between stages.
+Ralph is an autonomous coding loop that runs a local LLM through structured coding tasks defined in `prd.json`. Each task goes through four isolated stages — build, critique, fix, quality — with no memory between stages.
 
-**Ralph runs in Docker** so it can only write to mounted volumes. It uses a local LLM (Qwen 3.5 27B via llama.cpp is the tested configuration, but any OpenAI-compatible server works).
+**Ralph runs in Docker** so it can only write to mounted volumes. It uses a local LLM (Qwen 3.6 35B via llama.cpp is the tested configuration, but any OpenAI-compatible server works).
 
 ---
 
@@ -88,16 +88,16 @@ Each project lives at `{RALPH_DIR}/projects/{slug}/`:
 
 ---
 
-## The 3-Stage Pipeline
+## The 4-Stage Pipeline
 
-Every story runs through three completely isolated stages. The creator never reviews its own work — each stage is a fresh model call with no memory of the previous one.
+Every story runs through four completely isolated stages. The creator never reviews its own work — each stage is a fresh model call with no memory of the previous one.
 
 ```
 Story from prd.json
         │
         ├─► STAGE 1 — CREATE
         │   Ralph builds the file using PROMPT.md
-        │   Writes to /app/projects/{slug}/code/
+        │   Writes to /app/projects/{slug}/
         │   Git commit
         │
         ├─► STAGE 2 — CRITIQUE
@@ -105,15 +105,21 @@ Story from prd.json
         │   Reads the output file cold — no memory of how it was built
         │   Writes critique.md next to the output
         │
-        └─► STAGE 3 — FIX
-            Ralph reworks the file using PROMPT-rework.md
-            Overwrites the output file
-            Git commit
+        ├─► STAGE 3 — FIX
+        │   Ralph reworks the file using PROMPT-rework.md
+        │   Overwrites the output file
+        │   Git commit
+        │
+        └─► STAGE 4 — QUALITY
+            Ruff lint/format -> Pyright type check -> Desloppify scan
+            Rework stories auto-injected into prd.json
 
-prd.json updated → next story
+prd.json updated -> next story
 ```
 
 **FIX always runs** — even if CRITIQUE passes. It validates and catches issues critique missed.
+
+**QUALITY always runs** — it never fails the pipeline (best-effort). It generates rework stories for mechanical issues and injects them into the PRD.
 
 ---
 
@@ -160,11 +166,11 @@ Bundling multiple concepts into a single story is the most common cause of pipel
       "title": "One-line title — include filename if creating",
       "type": "create",
       "description": "Current state: ...\n\nWhat to build: ...\n\nConstraints: ...",
-      "target_file": "/app/projects/my-project/code/output.py",
-      "output_file": "/app/projects/my-project/code/output.py",
+      "target_file": "/app/projects/my-project/output.py",
+      "output_file": "/app/projects/my-project/output.py",
       "preserve": ["behavior not to change"],
       "acceptanceCriteria": [
-        "python3 -m py_compile /app/projects/my-project/code/output.py"
+        "python3 -m py_compile /app/projects/my-project/output.py"
       ],
       "qualityChecks": ["python3 -m py_compile {file}"],
       "priority": 1,
@@ -192,9 +198,9 @@ Bundling multiple concepts into a single story is the most common cause of pipel
 |-------|----------|-------|
 | `id` | Yes | Format: `US-001`, `US-002`, etc. |
 | `title` | Yes | One line with filename |
-| `type` | Yes | Must be `"create"` for 3-stage pipeline |
+| `type` | Yes | Must be `"create"` for 4-stage pipeline |
 | `description` | Yes | Must include `Current state:` section |
-| `target_file` | Yes | Path Ralph will write to |
+| `target_file` | Yes | Path Ralph will write to — no `/code/` subdir |
 | `output_file` | Yes | Same as `target_file` for create stories |
 | `preserve` | Recommended | Behaviors to keep unchanged |
 | `contextFiles` | Yes | Primary output file should be first |

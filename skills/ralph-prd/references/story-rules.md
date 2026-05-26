@@ -132,11 +132,11 @@ The `git_commit` tool may fail with `'nc is not allowed'` in some environments. 
 
 ---
 
-## Rule 15: Keep contextFiles Minimal for 3-Stage Pipeline
+## Rule 15: Keep contextFiles Minimal for 4-Stage Pipeline
 
 The CRITIQUE stage (stage 2 of the pipeline) reads the full PRD JSON plus the entire output file in a single model call. Large contextFiles increase the risk of CRITIQUE timing out.
 
-For 3-stage pipeline stories: only include files Ralph will actually modify in `contextFiles`.
+For 4-stage pipeline stories: only include files Ralph will actually modify in `contextFiles`.
 
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: ralph-loop
-description: "Manage the Ralph autonomous coding loop. Ralph runs local instruct models (Qwen 3.5 27B via llama.cpp) through structured coding tasks defined in prd.json. Ralph runs inside a Docker container (via docker compose). Execution is a 3-stage pipeline: CREATE → CRITIQUE → FIX. Use when: checking Ralph status, starting a new Ralph project, reviewing Ralph's completed work, intervening when Ralph is stuck, understanding what Ralph did and why. Triggers: 'check ralph status', 'what is ralph working on', 'start ralph', 'ralph done yet', 'ralph is stuck', 'how does ralph work', 'ralph pipeline'."
+description: "Manage the Ralph autonomous coding loop. Ralph runs local instruct models (Qwen 3.6 35B via llama.cpp) through a 4-stage pipeline defined in prd.json: CREATE -> CRITIQUE -> FIX -> QUALITY. Ralph runs inside a Docker container (via docker compose). QUALITY stage runs Ruff (lint/format) + Pyright (type check) + Desloppify (quality scoring) and injects rework stories back into the PRD. Ralph also supports JS/TS projects via Biome. Use when: checking Ralph status, starting a new Ralph project, reviewing Ralph's completed work, intervening when Ralph is stuck. Triggers: 'check ralph status', 'what is ralph working on', 'start ralph', 'ralph done yet', 'ralph is stuck', 'how does ralph work', 'ralph pipeline'."
 tags: ["ralph", "autonomous", "coding", "llm", "qwen", "llama.cpp", "docker"]
 related_skills: ["ralph-prd"]
 ---
@@ -20,7 +20,7 @@ Story from prd.json
     │
     ├─► STAGE 1 — CREATE
     │   Ralph builds the file using PROMPT.md
-    │   Writes to /app/projects/{slug}/code/
+    │   Writes to /app/projects/{slug}/
     │   Git commit
     │
     ├─► STAGE 2 — CRITIQUE
@@ -28,15 +28,22 @@ Story from prd.json
     │   Reads the output file cold — no memory of how it was built
     │   Writes critique.md next to the output
     │
-    └─► STAGE 3 — FIX
-        Ralph reworks the file using PROMPT-rework.md
-        Overwrites the output file
-        Git commit
+    ├─► STAGE 3 — FIX
+    │   Ralph reworks the file using PROMPT-rework.md
+    │   Overwrites the output file
+    │   Git commit
+    │
+    └─► STAGE 4 — QUALITY
+        Ruff lint/format -> Pyright type check -> Desloppify scan
+        quality_status.json + rework_stories.json
+        Rework stories injected into prd.json for next pass
 
-prd.json updated → next story
+prd.json updated -> next story
 ```
 
 **FIX always runs** — even if CRITIQUE passes.
+
+**QUALITY always runs** — it never fails the pipeline (best-effort). It generates rework stories for mechanical issues and injects them into the PRD.
 
 **Key principle:** Each stage is a completely fresh model context — no memory, no bias. The creator never reviews its own work.
 
@@ -66,7 +73,8 @@ Each project lives at `projects/{slug}/`:
 ├── prd.json              ← source of truth (must exist)
 ├── progress.txt          ← append-only run log
 ├── critique.md           ← stage 2 output
-├── code/                 ← generated code
+├── quality_status.json   ← stage 4 output (ruff + pyright + desloppify scores)
+├── rework_stories.json   ← stage 4 output (auto-generated fix queue)
 └── .pipeline.lock        ← concurrency lock (remove if stale)
 ```
 
@@ -149,12 +157,13 @@ Never launch multiple `docker compose run --rm ralph` simultaneously on the same
 
 | File | Purpose |
 |------|---------|
-| `pipeline_runner.py` | 3-stage pipeline — PRIMARY ENTRYPOINT |
+| `pipeline_runner.py` | 4-stage pipeline — PRIMARY ENTRYPOINT |
 | `ralph.py` | Legacy orchestrator (for single-stage runs) |
 | `prd_manager.py` | PRD CRUD, story state machine |
 | `prd_linter.py` | Validates prd.json before every run |
 | `tools.py` | Tool registry + execution |
 | `config.yaml` | Model URL, limits, timeouts |
 | `PROMPT*.md` | Stage system prompts |
+| `scripts/quality_pipeline.py` | Stage 4: Ruff + Pyright + Desloppify |
 
 Full details in `README.md`.
