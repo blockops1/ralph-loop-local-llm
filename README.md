@@ -28,7 +28,19 @@ Container (Ralph)
 
 ## Prerequisites
 
-1. **llama-server running on host at `http://localhost:8090`**
+1. **Load the Ralph skills before running** — this is mandatory, not optional.
+
+   Ralph's behavior is defined entirely by its skills. Skipping this step causes the most common failures: malformed PRDs, wrong path formats, and skipped validation steps.
+
+   ```bash
+   # In your agent (Hermes), load both skills:
+   skill_load("ralph-loop")     # Pipeline execution, troubleshooting, intervention
+   skill_load("ralph-prd")      # PRD authoring, story scoping, validation
+   ```
+
+   The skills are at `skills/ralph-loop/` and `skills/ralph-prd/` in this repo.
+
+2. **llama-server running on host at `http://localhost:8090`**
 
    Any OpenAI-compatible inference server works. Tested with llama.cpp:
    ```bash
@@ -41,15 +53,15 @@ Container (Ralph)
    curl -s http://localhost:8090/v1/models | jq
    ```
 
-2. **Docker Desktop** running
+3. **Docker Desktop** running
 
-3. **Build the image (one time):**
+4. **Build the image (one time):**
    ```bash
    cd ~/ralph
    docker compose build
    ```
 
-4. **Bot tokens** (optional — for notifications):
+5. **Bot tokens** (optional — for notifications):
    - `DISCORD_BOT_TOKEN` and/or `TELEGRAM_BOT_TOKEN` in `~/.hermes/.env`
 
 ---
@@ -81,10 +93,13 @@ Each project lives at `{RALPH_DIR}/projects/{slug}/`:
 {slug}/
 ├── prd.json              ← source of truth (must exist)
 ├── progress.txt          ← append-only run log
-├── critique.md           ← stage 2 output (per project)
-├── code/                 ← generated code
+├── critique.md           ← stage 2 output
+├── quality_status.json   ← stage 4 output (ruff + pyright + desloppify scores)
+├── rework_stories.json   ← stage 4 output (auto-generated fix queue)
 └── .pipeline.lock        ← concurrency lock (remove if stale)
 ```
+
+> **Note:** Ralph writes files directly to `{slug}/` — there is no `code/` subdirectory. All paths in `prd.json` use container paths like `/app/projects/{slug}/foo.py`, not `/app/projects/{slug}/code/foo.py`.
 
 ---
 
